@@ -1,0 +1,14 @@
+{
+    "liveServer.settings.root": "/home/pedro55562/uaibot_files/html",
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.NoBrowser": true,
+    "liveServer.settings.ignoreFiles": [
+        ".vscode/**",
+        "**/*.scss",
+        "**/*.sass"
+    ],
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "liveServer.settings.donotVerifyTags": true
+}

@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Live Server Automatically",
+            "type": "shell",
+            "command": "live-server",
+            "args": [
+                "/home/pedro55562/uaibot_files/html",
+                "--port=5500",
+                "--browser=/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+            ],
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ],
+    "blade-runner.autoRun": {
+        "Start Live Server Automatically": {
+            "runOn": "folderOpen"
+        }
+    },
+    "liveServer.settings.root": "/home/pedro55562/uaibot_files/html",
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.NoBrowser": true,
+    "liveServer.settings.ignoreFiles": [
+        ".vscode/**",
+        "**/*.scss",
+        "**/*.sass"
+    ],
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "liveServer.settings.donotVerifyTags": true
+}

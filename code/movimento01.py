@@ -33,6 +33,8 @@ def setup_motion_planning_simulation(problem_index):
     frame_tg = ub.Frame(htm=htm_tg, size=0.1)
     robot = ub.Robot.create_franka_emika_3(htm=htm_base)
     robot.add_ani_frame(time=0, q=q0)
+    for obs in all_obs:
+        obs._mesh_material = ub.MeshMaterial(color='magenta')
 
     sim = ub.Simulation()
     sim.add(all_obs)
@@ -74,11 +76,13 @@ def get_q_goal(robot, all_obs, htm_tg, htm_base, max_iter = 300):
             return q_goal
     return None
 
-def is_path_free(q_near, q_new, robot, htm_base, all_obs, num_samples=10):
-    #verifica se o caminho entre q_near e q_new é livre
-    
-    # faz uma interpolacao linear entre q_near e q_new
-    # para isso utiliza um numero de amostras igual a 10
+def is_path_free(q_near, q_new, robot, htm_base, all_obs, sample_rate = 0.1):
+    # verifica se o caminho entre q_near e q_new é livre
+    # utilizando a interpolação linear
+    # coleta amostras a cada 0.3 de distancia no espaço de configuração.
+    num_samples = int(distance(q_near, q_new) / sample_rate)
+    if num_samples < 1:
+        num_samples = 5
     for i in range(1, num_samples + 1):
         alpha = i / num_samples  
         q_interp = (1 - alpha) * q_near + alpha * q_new 
@@ -95,6 +99,44 @@ def backpropagation(graph, q_goal):
         current_node = graph.nodes[current_node]['parent']
     path.reverse()
     return path
+
+
+def get_path(graph, q_goal_node):
+    graph_path = []
+    current_node = q_goal_node
+    while current_node is not None:
+        graph_path.append(current_node)
+        current_node = graph.nodes[current_node]['parent']
+
+    graph_path.reverse()
+    return graph_path
+
+
+
+def refine_path(graph, q_goal_node, robot, htm_base, all_obs):
+    graph_path = get_path(graph, q_goal_node)
+    if len(graph_path) < 2:
+        return graph
+    size = len(graph_path)
+    for j in range(round(size - 1), 0, -1): # do final 
+        for i in range(0 , round(size - 1)): # do começo
+            print(size)
+            if i >= size or j >= size:
+                continue
+            free = is_path_free(np.array(graph_path[i]).reshape(-1, 1) , np.array(graph_path[j]).reshape(-1, 1) ,robot, htm_base, all_obs)
+            if free == True:
+                if j > 0:
+                    graph.remove_edge(graph_path[j], graph_path[j - 1])
+                graph.add_edge(graph_path[j], graph_path[i])
+                graph.nodes[ graph_path[j] ]['parent'] = graph_path[i]
+                graph_path = get_path(graph, q_goal_node)
+                size = len(graph_path)
+                j = size - 1
+                break
+    return graph
+
+
+
 
 def rrt_path_planning(robot, all_obs, q0, htm_base, htm_tg, max_iter= 500, tolerance=0.15, goal_bias=0.35, bias_decay_rate = 0.0001, num_of_trys = 10):
     n = robot.q.shape[0]
@@ -143,7 +185,11 @@ def rrt_path_planning(robot, all_obs, q0, htm_base, htm_tg, max_iter= 500, toler
                 q_goal_tuple = tuple(q_goal.flat)
                 graph.add_node(q_goal_tuple, parent=q_new_tuple, cost=cost)
                 graph.add_edge(q_new_tuple, q_goal_tuple)
-                # volta de q_goal até q0 para encontrar o caminho              
+                # pós processamento
+
+                # monta uma lista com todos os nós do grafo, de q_goal até q0
+                graph = refine_path(graph, q_goal_tuple, robot, htm_base, all_obs)
+                # volta de q_goal até q0 para encontrar o caminho        
                 path = backpropagation(graph, q_goal)
                 print(f"Goal reached with {i} iterations!")
                 print(f"Final distance: {distance(q_new, q_goal)}")
@@ -169,12 +215,8 @@ def set_configuration_speed(robot, d_dot, t, dt):
   q_next = robot.q + d_dot*dt
   robot.add_ani_frame(time = t+dt, q = q_next)
 
-def fun_F(r):
-    return -2*r
-
 
 def move_to_configuration (robot, goal_q, base_frame, t, dt, consider_orientation = True ,task_tol = 0.05):
-    
     n = robot.q.shape[0]
     goal_H = robot.fkm(q = goal_q)
 
@@ -183,40 +225,28 @@ def move_to_configuration (robot, goal_q, base_frame, t, dt, consider_orientatio
     goal_y = goal_H[0:3 , 1]
     goal_z = goal_H[0:3 , 2]
 
-    J_r = np.matrix(np.zeros((6,n)))
-    r   = np.matrix(np.zeros((6,1)))
 
     task_complete = False
 
     while task_complete == False:
-        J_r = np.matrix(np.zeros((6,n)))
         r   = np.matrix(np.zeros((6,1)))
 
-        current_jg , current_fkm = robot.jac_geo()
+        current_fkm = robot.fkm()
 
         x_eef = current_fkm[0:3 , 0]
         y_eef = current_fkm[0:3 , 1]
         z_eef = current_fkm[0:3 , 2]
         s_eef = current_fkm[0:3 , 3]
         
-        J_v = current_jg[0 : 3 , : ]
-        J_w = current_jg[3 : 6 , : ]
         
         r[0 : 3] = s_eef - goal_s
-        if consider_orientation:
-            r[3] = 1 - goal_x.T*x_eef 
-            r[4] = 1 - goal_y.T*y_eef
-            r[5] = 1 - goal_z.T*z_eef        
+        r[3] = 1 - goal_x.T*x_eef 
+        r[4] = 1 - goal_y.T*y_eef
+        r[5] = 1 - goal_z.T*z_eef        
 
-        J_r[0 : 3, : ] = J_v
-        if consider_orientation:
-            J_r[3 , : ]  = goal_x.T * ub.Utils.S(x_eef) * J_w
-            J_r[4 , : ]  = goal_y.T * ub.Utils.S(y_eef) * J_w
-            J_r[5 , : ]  = goal_z.T * ub.Utils.S(z_eef) * J_w
 
         u = np.matrix(np.zeros((n,1)))
-
-        u = ub.Utils.dp_inv(J_r , 1e-3)*fun_F(r)
+        u = 1*(goal_q - robot.q)
 
         set_configuration_speed(robot , u,t,dt)
 
@@ -241,13 +271,12 @@ def move_robot_through_path(robot, q_list, base_frame, t, dt, task_tol=0.05, con
     print("Path execution completed.")
     return t    
 
-scenario_index = [412, 734]
+scenario_index = np.random.uniform(0, 2599, 10).astype(int)
 for index in scenario_index:
     print(f"==============================\n\tScenario {index}\n==============================\n")
     robot, sim, all_obs, q0, htm_tg, htm_base = setup_motion_planning_simulation(index)
     pathh = []
     pathh = rrt_path_planning(robot, all_obs, q0, htm_base, htm_tg, max_iter = 500, tolerance = 0.35 , goal_bias = 0.35, bias_decay_rate = 0.0001, num_of_trys = 50)
-
     if pathh != []:
 
     # coloca bola nas posicoes do caminho
@@ -268,3 +297,21 @@ for index in scenario_index:
 
 
 print("\nSimulation completed.\n")
+
+
+
+'''
+TO DO:
+- ideia: discretizar o caminho para um grande numero de amostras p/ rodar o vector field
+- adicionar novos pontos proximos as trancicoes, para que possamos fazer uma interpolacao entre os pontos e o movimento fique mais suave.
+- pesquisar a possibilidade de implementar um controle utilizando campos vetoriais, assim pode-se corrigir erros numericos e ficar mais centrado no caminho.
+
+After evrything listed above is done, we can start to implement the RRT* algorithm and the RRT* informed.
+- using the elipsoid method.
+
+'''
+
+# DONE: Trocar o metodo de verificação do caminho entre q_new e q_near. 
+# Foi constatado que não é possivel o uso total do kdtree, dessa forma precisamos continuar com o grafo atual
+# parece ok : adicionar e configurar uma fase de pós processacmento do caminho encontrado, com o objetivo de melhorar a qualidade do caminho encontrado.
+# adicionar um controle proporcional para o movimento do robô, assim o movimento vai ser mais suave.

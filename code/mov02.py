@@ -281,25 +281,73 @@ def move_to_configuration (robot, goal_q, base_frame, t, dt, consider_orientatio
             return t
     
 
-def move_robot_through_path(robot, q_list, base_frame, t, dt, task_tol=0.05, consider_path_orientation = True):
+def move_robot_through_path(robot, q_list, base_frame, t, dt, task_tol=0.1, consider_path_orientation = True):
+    task_complete = False
+    n = robot.q.shape[0]
+    while task_complete == False:
+        u = np.matrix(np.zeros((n,1)))
+        u , _ , _= my_vector_field(robot, q_list)
+        
+        set_configuration_speed(robot , u,t,dt)
+        t = t + dt
+        print(np.linalg.norm(robot.q - q_list[-1]))
+        if ( np.linalg.norm(robot.q - q_list[-1]) < task_tol):
+            task_complete = True
+            break
+'''
     path_lenght = len(q_list)
     for i in range(len(q_list) - 2):
         q_target = q_list[i + 1]
         
         t = move_to_configuration(robot, q_target, base_frame, t, dt, consider_orientation = consider_path_orientation)
 
-    t = move_to_configuration(robot, q_list[path_lenght - 1], base_frame, t, dt, consider_orientation = True , task_tol = task_tol)
+    t = move_to_configuration(robot, q_list[path_lenght - 1], base_frame, t, dt, consider_orientation = True , task_tol = task_tol) 
+    return
+'''
 
-    return t    
+            # ajuste de parametrso alpha e const_vel
 
-def draw_balls(pathhh_, robot, sim, color="cyan"):
+def my_vector_field(robot, curve, alpha=2, const_vel=4):
+    # Certifique-se de que curve é um numpy array
+    n = np.shape(robot.q)[0]
+
+    # Encontrar o ponto mais próximo na curva
+    index = -1
+    dmin = float('inf')
+    for i in range(len(curve)):
+        d = np.linalg.norm(robot.q - curve[i])
+        if d < dmin:
+            dmin = d
+            index = i
+
+    f_g = 0.63 * np.arctan(alpha * dmin)
+    f_h = np.sqrt(max(1 - f_g**2, 0))
+
+    if index < len(curve) - 1:
+        diff = curve[index + 1] - curve[index]
+    else: 
+        diff = curve[index] - curve[index - 1]
+    T = diff / (np.linalg.norm(diff) + 1e-8)
+
+    # Calcular o vetor normal N, apontando do robô para o ponto da curva
+    N = (curve[index] - robot.q) / (np.linalg.norm(curve[index] - robot.q) + 1e-8)
+
+    # Calcular a velocidade de controle q_dot
+    sgn = np.sign(const_vel)
+    q_dot = abs(const_vel) * (f_g * N + sgn * f_h * T)
+
+    return q_dot, dmin, index
+
+
+
+def draw_balls(pathhh_, robot, sim, color="cyan", radius = 0.01):
         sl = [ ]
         for q_c in pathhh_:
             fkm = robot.fkm(q_c)
             sl.append( fkm[ 0 : 3 , 3] )            
         balls = []
         for s in sl:
-            balls.append( ub.Ball(htm = ub.Utils.trn(s), radius=0.01, color = color))
+            balls.append( ub.Ball(htm = ub.Utils.trn(s), radius = radius, color = color))
         sim.add(balls)
 
 def bezier_curve(p0, p1, p2, t):
@@ -353,22 +401,20 @@ def generate_path_samples( path, sample_distance):
 
 
 scenario_index = np.random.uniform(0, 2599, 0).astype(int)
-scenario_index = np.append(scenario_index, [412]) #412, 734
+scenario_index = np.append(scenario_index, [734]) #412, 734
 
 for index in scenario_index:
     print(f"==============================\n\tScenario {index}\n==============================\n")
     robot, sim, all_obs, q0, htm_tg, htm_base = setup_motion_planning_simulation(index)
     pathh = []
     pathh= rrt_path_planning(robot, all_obs, q0, htm_base, htm_tg, max_iter = 500, tolerance = 0.35 , goal_bias = 0.35, bias_decay_rate = 0.0001, num_of_trys = 50)
-    sample_path, intermediate_q = generate_path_samples(pathh,sample_distance=0.02)
+    sample_path, intermediate_q = generate_path_samples(pathh,sample_distance=0.01)
     if pathh != []:
-        draw_balls(sample_path, robot, sim,color="red")
-        print(len(sample_path))
-        t = move_robot_through_path(robot=robot, q_list=sample_path , base_frame=htm_base, t = 0, dt = 0.01, task_tol = 0.001 ,consider_path_orientation = True)
+        #draw_balls(sample_path, robot, sim,color="red",radius = 0.01)
+        #draw_balls(pathh, robot, sim,color="white",radius = 0.02)
+        #draw_balls(intermediate_q, robot, sim,color="cyan",radius = 0.02    )
+        t = move_robot_through_path(robot=robot, q_list=sample_path , base_frame=htm_base, t = 0, dt = 0.01, task_tol = 0.08 ,consider_path_orientation = True)
         sim.run()
         sim.save("/home/pedro55562/uaibot_files/html/path_planning", "mov" + str(index))
 
-
 print("\nSimulation completed.\n")
-
-

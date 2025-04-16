@@ -118,12 +118,16 @@ def refine_path(graph, q_goal_node, robot, htm_base, all_obs):
     if len(graph_path) < 2:
         return graph
     size = len(graph_path)
+    # itera o caminho encontrado do final até o começo
     for j in range(round(size - 1), 0, -1): # do final 
         for i in range(0 , round(size - 1)): # do começo
             print(size)
             if i >= size or j >= size:
                 continue
+            # verifica se o caminho entre os nos esta livre
             free = is_path_free(np.array(graph_path[i]).reshape(-1, 1) , np.array(graph_path[j]).reshape(-1, 1) ,robot, htm_base, all_obs)
+            
+            # se o caminho esta livre, troca o parent deste nó
             if free == True:
                 if j > 0:
                     graph.remove_edge(graph_path[j], graph_path[j - 1])
@@ -271,7 +275,7 @@ def move_robot_through_path(robot, q_list, base_frame, t, dt, task_tol=0.05, con
     print("Path execution completed.")
     return t    
 
-scenario_index = [843]
+scenario_index = [412]
 for index in scenario_index:
     print(f"==============================\n\tScenario {index}\n==============================\n")
     robot, sim, all_obs, q0, htm_tg, htm_base = setup_motion_planning_simulation(index)
@@ -298,20 +302,3 @@ for index in scenario_index:
 
 print("\nSimulation completed.\n")
 
-
-
-'''
-TO DO:
-- ideia: discretizar o caminho para um grande numero de amostras p/ rodar o vector field
-- adicionar novos pontos proximos as trancicoes, para que possamos fazer uma interpolacao entre os pontos e o movimento fique mais suave.
-- pesquisar a possibilidade de implementar um controle utilizando campos vetoriais, assim pode-se corrigir erros numericos e ficar mais centrado no caminho.
-
-After evrything listed above is done, we can start to implement the RRT* algorithm and the RRT* informed.
-- using the elipsoid method.
-
-'''
-
-# DONE: Trocar o metodo de verificação do caminho entre q_new e q_near. 
-# Foi constatado que não é possivel o uso total do kdtree, dessa forma precisamos continuar com o grafo atual
-# parece ok : adicionar e configurar uma fase de pós processacmento do caminho encontrado, com o objetivo de melhorar a qualidade do caminho encontrado.
-# adicionar um controle proporcional para o movimento do robô, assim o movimento vai ser mais suave.

@@ -278,4 +278,4 @@ robot.detach_object(cube)
 
 sim = ub.Simulation.create_sim_factory([robot, table1, table2, table3, obstacle, cube, frame_get_cube, frame_h1, frame_h2,ball_tr])
 sim.run()
-sim.save("/home/pedro55562/uaibot_code", "controle02")
+sim.save("/home/pedro55562/uaibot_files/code/", "controle02")

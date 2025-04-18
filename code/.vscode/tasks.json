@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "live-server",
             "args": [
-                "/home/pedro55562/uaibot_files/html",
+                "/home/pedro55562/uaibot_files/info_storage",
                 "--port=5500",
                 "--browser=/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
             ],
@@ -25,7 +25,7 @@
             "runOn": "folderOpen"
         }
     },
-    "liveServer.settings.root": "/home/pedro55562/uaibot_files/html",
+    "liveServer.settings.root": "/home/pedro55562/uaibot_files/info_storage",
     "liveServer.settings.port": 5500,
     "liveServer.settings.NoBrowser": true,
     "liveServer.settings.ignoreFiles": [

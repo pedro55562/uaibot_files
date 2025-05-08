@@ -1,0 +1,2344 @@
+<html>
+<style>
+.controller:hover{opacity:1 !important;}
+</style>
+<body>
+<div id='canvas_container_17456096111504645' style='width:960px;height:720px;position:relative'>
+<div id='loading_screen_17456096111504645' style='width:960px;height:720px;position:relative; background-color: #19bd39;text-align:center;align-items:center;display:flex;justify-content:center'> 
+ <img src='https://cdn.jsdelivr.net/gh/viniciusmgn/uaibot_content@master/contents/SVG/logo_uai_bot.svg' style='width:200px;height:114px'/>
+ </div>
+<script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js'></script>
+<canvas id='scene_17456096111504645' width='960px' height='720px'></canvas>
+<!-- USER DIVS GO HERE --><div class = 'controller' style='width:960px;height:30px;'></div>
+</div>
+
+ <script type="module">
+import {
+	Object3D, Vector3, BoxBufferGeometry, Color, Mesh, MeshBasicMaterial, PerspectiveCamera, OrthographicCamera,
+	Scene, WebGLRenderer, AmbientLight, DirectionalLight, HemisphereLight, MeshStandardMaterial,
+	AxesHelper, GridHelper, Matrix4, SphereBufferGeometry, CylinderBufferGeometry, ConeGeometry, Group, LoadingManager, MeshPhysicalMaterial, Vector2, FrontSide,
+	BackSide, DoubleSide, PMREMGenerator, TextureLoader, PointLight, UVMapping, CubeReflectionMapping, CubeRefractionMapping,
+	EquirectangularReflectionMapping, EquirectangularRefractionMapping, CubeUVReflectionMapping,
+	CubeUVRefractionMapping, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping,
+	NearestFilter, LinearFilter, NearestMipmapNearestFilter, NearestMipmapLinearFilter, LinearMipmapNearestFilter,
+	LinearMipmapLinearFilter, BufferGeometry, Float32BufferAttribute, PointsMaterial, Points, ArrowHelper, TextGeometry, CubeTextureLoader, sRGBEncoding
+} from 'https://cdn.skypack.dev/three@0.135.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/controls/OrbitControls.js';
+import { OBJLoader } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/OBJLoader.js';
+import { STLLoader } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/STLLoader.js';
+import { ColladaLoader } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/ColladaLoader.js';
+import { GUI } from 'https://cdn.skypack.dev/dat.gui';
+import { ParametricGeometry } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/geometries/ParametricGeometry.js'
+
+
+//--------------------SIMULATION ELEMENTS---------------------
+
+const delay = 500; 
+ const maxTime = 0; 
+ const cameraType= 'perspective'; 
+ const sceneID= '17456096111504645'; 
+ const showWorldFrame=true; 
+ const showGrid=true; 
+ const backgroundColor='#F5F6FA'; 
+ const ambientLightIntensity = 4;
+ const ldrUrls = [];
+ const cameraStartPose = [1.76, 1.1, 1.45, 0.0, 0.0, 0.0, 1.0];
+ //SIMULATION PARAMETERS GO HERE
+
+function elapsedMs() {
+	return (new Date()).getTime();
+}
+
+
+class Objsim {
+	constructor(_frames) {
+		this.frames = _frames;
+		this.currentFrame = 0;
+		this.shape = "I HAVE NO SHAPE YET";
+	}
+
+	hasLoaded() {
+		return true;
+	}
+
+	nextFrame() {
+		while ((this.currentFrame < this.frames.length - 1) && (1000 * this.frames[this.currentFrame + 1][0] + delay < (elapsedMs() - startMs))) {
+			this.currentFrame += 1;
+		}
+	}
+	setFrameTime(time) {
+		this.currentFrame = 0;
+		while ((this.currentFrame < this.frames.length - 1) && (this.frames[this.currentFrame + 1][0] < time)) {
+			this.currentFrame += 1;
+		}
+	}
+	showFrame() {
+		this.shape.matrix.set(this.frames[this.currentFrame][1], this.frames[this.currentFrame][2], this.frames[this.currentFrame][3], this.frames[this.currentFrame][4],
+			this.frames[this.currentFrame][5], this.frames[this.currentFrame][6], this.frames[this.currentFrame][7], this.frames[this.currentFrame][8],
+			this.frames[this.currentFrame][9], this.frames[this.currentFrame][10], this.frames[this.currentFrame][11], this.frames[this.currentFrame][12],
+			this.frames[this.currentFrame][13], this.frames[this.currentFrame][14], this.frames[this.currentFrame][15], this.frames[this.currentFrame][16]);
+
+
+	}
+	setEnvMap(envMap) {
+		this.shape.material.envMap = envMap;
+		this.shape.material.needsUpdate = true;
+	}
+}
+
+class Box extends Objsim {
+	constructor(_width, _height, _depth, _frames, _material) {
+		super(_frames);
+		this.width = _width;
+		this.height = _height;
+		this.depth = _depth;
+		const geometry = new BoxBufferGeometry(this.width, this.height, this.depth);
+		const cube = new Mesh(geometry, _material);
+		cube.matrixAutoUpdate = false;
+		this.shape = cube;
+	}
+}
+
+class Ball extends Objsim {
+	constructor(_radius, _frames, _material) {
+		super(_frames);
+		this.radius = _radius;
+		const geometry = new SphereBufferGeometry(this.radius, 64, 32);
+		const sphere = new Mesh(geometry, _material);
+		sphere.matrixAutoUpdate = false;
+		this.shape = sphere;
+	}
+}
+
+class Cylinder extends Objsim {
+	constructor(_radius, _height, _frames, _material) {
+		super(_frames);
+		this.radius = _radius;
+		this.height = _height;
+		const geometry = new CylinderBufferGeometry(this.radius, this.radius, this.height, 20);
+		const cylinder = new Mesh(geometry, _material);
+		cylinder.matrixAutoUpdate = false;
+		this.shape = cylinder;
+	}
+}
+
+class Cone extends Objsim {
+	constructor(_radius, _height, _frames, _material) {
+		super(_frames);
+		this.radius = _radius;
+		this.height = _height;
+		const geometry = new ConeGeometry(this.radius, this.height, 20, 5, false, 0.0, 6.28);
+		const cone = new Mesh(geometry, _material);
+		cone.matrixAutoUpdate = false;
+		this.shape = cone;
+	}
+}
+
+function signFun(x, n) {
+	return Math.sign(x) * (Math.pow(Math.abs(x), n))
+}
+
+class SmoothBox extends Objsim {
+
+
+
+	constructor(_width, _height, _depth, _frames, _material) {
+		super(_frames);
+		this.width = _width;
+		this.height = _height;
+		this.depth = _depth;
+
+		const geometry = new ParametricGeometry(function fun(u, v, target) {
+			let cosu = signFun(Math.cos(0.0001 * Math.PI + 0.9999 * Math.PI * u), 0.5)
+			let sinu = signFun(Math.sin(0.0001 * Math.PI + 0.9999 * Math.PI * u), 0.5)
+			let cosv = signFun(Math.cos(2 * Math.PI * v), 0.5)
+			let sinv = signFun(Math.sin(2 * Math.PI * v), 0.5)
+
+			let x = (_width / 2) * sinu * cosv;
+			let y = (_height / 2) * sinu * sinv;
+			let z = (_depth / 2) * cosu;
+
+			target.set(x, y, z);
+
+		}, 25, 25);
+
+
+		const smoothCube = new Mesh(geometry, _material);
+		smoothCube.matrixAutoUpdate = false;
+		this.shape = smoothCube;
+	}
+
+
+
+}
+
+class ConvexPolytope extends Objsim {
+
+
+
+	constructor(_vertexes, _faces, _frames, _material) {
+		super(_frames);
+		this.vertexes = _vertexes;
+		this.faces = _faces;
+
+
+		const geometry = new BufferGeometry();
+		const verticesArray = [];
+		const indicesArray = [];
+
+		// this.vertexes.forEach(v => {
+		// 	verticesArray.push(v[0], v[1], v[2]);
+		// });
+
+		this.vertexes.forEach(v => {
+			verticesArray.push(v[0], v[2], -v[1]);
+		});
+
+		this.faces.forEach(f => {
+			indicesArray.push(f[0], f[2], f[1]);
+		});
+
+		// this.faces.forEach(f => {
+		// 	indicesArray.push(f[0], f[1], f[2]);
+		// });
+
+
+		geometry.setAttribute(
+			"position",
+			new Float32BufferAttribute(verticesArray, 3)
+		);
+		geometry.setIndex(indicesArray);
+		geometry.computeVertexNormals();
+
+		const polytope = new Mesh(geometry, _material);
+		polytope.matrixAutoUpdate = false;
+		this.shape = polytope;
+	}
+
+
+
+}
+
+class PointCloud extends Objsim {
+
+	constructor(_points, _frames, _color, _size) {
+		super(_frames);
+
+		this.color = _color;
+		this.points = _points
+		this.size = _size;
+
+		const vertices = []
+		const geometry = new BufferGeometry();
+		geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+		const material = new PointsMaterial({ color: this.color, size: this.size });
+		this.shape = new Points(geometry, material);
+	}
+
+	showFrame() {
+		const vertices = [];
+
+		for (let i = this.frames[this.currentFrame][1]; i < this.frames[this.currentFrame][2]; i++) {
+			vertices.push(this.points[0][i], this.points[1][i], this.points[2][i]);
+		}
+
+		this.shape.geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+
+	}
+
+	setEnvMap(envMap) { }
+
+}
+
+class RigidObject extends Objsim {
+
+	constructor(_frames, _list_3dobject) {
+		super(_frames);
+
+		this.shape = new Group();
+		this.shape.matrixAutoUpdate = false;
+
+		const manager = new LoadingManager();
+
+		let loader;
+
+		for (let i = 0; i < _list_3dobject.length; i++) {
+			const _3dobject = _list_3dobject[i];
+			if (_3dobject.type === 'obj') {
+				loader = new OBJLoader(manager);
+				loader.load(_3dobject.url, (root) => {
+
+					root.scale.set(_3dobject.scale, _3dobject.scale, _3dobject.scale);
+					root.applyMatrix4(_3dobject.matrix)
+
+					root.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = _3dobject.mesh_material;
+						}
+					});
+
+					this.shape.add(root);
+				});
+			}
+			if (_3dobject.type === 'stl') {
+				loader = new STLLoader(manager);
+				loader.load(_3dobject.url, (root) => {
+					const mesh = new Mesh(root);
+
+					mesh.scale.set(_3dobject.scale, _3dobject.scale, _3dobject.scale);
+					mesh.applyMatrix4(_3dobject.matrix)
+
+					mesh.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = _3dobject.mesh_material;
+						}
+					});
+
+					this.shape.add(mesh);
+				});
+			}
+			if (_3dobject.type === 'dae') {
+				loader = new ColladaLoader(manager);
+				loader.load(_3dobject.url, (root) => {
+					const group = root.scene;
+
+					group.scale.set(_3dobject.scale, _3dobject.scale, _3dobject.scale);
+					group.applyMatrix4(_3dobject.matrix)
+
+					group.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = _3dobject.mesh_material;
+						}
+					});
+
+					this.shape.add(group);
+				});
+			}
+		}
+
+	}
+
+	setEnvMapTemp(variable, envMap) {
+		if (variable instanceof Mesh) {
+			variable.material.envMap = envMap;
+			variable.material.needsUpdate = true;
+		}
+		else if (variable instanceof Group) {
+			for (let i = 0; i < variable.children.length; i++) {
+				this.setEnvMapTemp(variable.children[i]);
+			}
+		}
+	}
+	setEnvMap(envMap) {
+		this.setEnvMapTemp(this.shape, envMap);
+	}
+
+}
+
+class Vector extends Objsim {
+
+
+	constructor(_frames, _color, _thickness, _origin, _dir, _length) {
+		super(_frames);
+
+		this.color = _color;
+		this.thickness = _thickness
+		this.origin = new Vector3(_origin[0], _origin[1], _origin[2]);
+		this.dir = new Vector3(_dir[0], _dir[1], _dir[2]);
+		this._length = length
+
+		this.shape = new ArrowHelper(this.dir, this.origin, this.length, this.color);
+		this.shape.line.material.linewidth = this.thickness;
+
+	}
+
+	showFrame() {
+		this.shape.setLength(this.frames[this.currentFrame][3]);
+		const dir = this.frames[this.currentFrame][2];
+		const origin = this.frames[this.currentFrame][1];
+
+		this.shape.setDirection(new Vector3(dir[0], dir[1], dir[2]));
+		this.shape.position.set(origin[0], origin[1], origin[2]);
+	}
+	setEnvMap(envMap) { }
+}
+
+class PointLightSim extends Objsim {
+
+
+	constructor(_frames) {
+		super(_frames);
+		this.shape = new PointLight(this.frames[0][1], this.frames[0][2], this.frames[0][3]);
+		this.shape.position.set(this.frames[0][4][0], this.frames[0][4][1], this.frames[0][4][2]);
+	}
+
+	showFrame() {
+		this.shape.color.set(this.frames[this.currentFrame][1]);
+		this.shape.intensity = this.frames[this.currentFrame][2];
+		this.shape.distance = this.frames[this.currentFrame][3];
+		this.shape.position.set(this.frames[this.currentFrame][4][0], this.frames[this.currentFrame][4][1], this.frames[this.currentFrame][4][2]);
+	}
+	setEnvMap(envMap) { }
+}
+
+class HTMLDiv extends Objsim {
+
+	constructor(_id, _frames) {
+		super(_frames);
+		this.id = _id;
+		this.shape = undefined;
+	}
+
+	showFrame() {
+		var element = document.getElementById(this.id);
+
+		element.innerHTML = this.frames[this.currentFrame][1];
+		element.style.position = "absolute";
+		element.style = this.frames[this.currentFrame][2];
+	}
+	setEnvMap(envMap) { }
+}
+
+class Robot extends Objsim {
+
+	constructor(_objBase, _link, _frames, _htm_base_0, _htm_n_eef, _eef_frame_visible) {
+		super(_frames);
+
+		this.loadedObjs = 0
+		this.links = _link;
+
+		this.totalNumberOfObjects = _objBase.length;
+
+		for (let i = 0; i < this.links.length; i++) {
+			this.totalNumberOfObjects += this.links[i].model3d.length;
+		}
+
+		this.htm_base_0 = _htm_base_0;
+
+		//Function that creates a generic robot
+		const base = new Group();
+		base.name = "base";
+
+		const baseFrame = new Group();
+		baseFrame.name = "baseFrame";
+		baseFrame.applyMatrix4(this.htm_base_0);
+
+
+		//Create link groups
+		let linkGroupList = [];
+
+		for (let i = 0; i <= this.links.length; i++) {
+
+			var linkGroup = new Group();
+			linkGroup.name = "linkFrame" + i.toString();
+			linkGroupList.push(linkGroup);
+
+			linkGroup = new Group();
+			linkGroup.name = "link" + i.toString();
+			//var axesHelper = new AxesHelper(0.2);
+			//axesHelper.matrixAutoUpdate = false;
+			//axesHelper.visible = true;
+			//linkGroup.add(axesHelper)
+
+			if (i < this.links.length) {
+				linkGroup.rotateZ(this.links[i].theta);
+				linkGroup.translateZ(this.links[i].d);
+				linkGroup.rotateX(this.links[i].alpha);
+				linkGroup.translateX(this.links[i].a);
+			}
+
+
+			linkGroup.updateMatrix();
+
+			linkGroupList.push(linkGroup);
+		}
+
+		var linkGroup = new Group();
+		linkGroup.name = "eefFrame";
+		linkGroupList.push(linkGroup);
+
+		linkGroup = new Group();
+		linkGroup.name = "eef";
+		// var axesHelper = new AxesHelper(0.2);
+		// axesHelper.matrixAutoUpdate = false;
+		// axesHelper.visible = _eef_frame_visible;
+		// linkGroup.add(axesHelper);
+		linkGroup.applyMatrix4(_htm_n_eef)
+		linkGroup.updateMatrix();
+		linkGroupList.push(linkGroup);
+
+
+		base.add(baseFrame)
+		baseFrame.add(linkGroupList[0])
+
+		for (let i = 0; i < linkGroupList.length - 1; i++) {
+			linkGroupList[i].add(linkGroupList[i + 1])
+		}
+
+		//Load 3D models
+
+		this.shape = base;
+		this.shape.matrixAutoUpdate = false;
+
+		this.loadObj(_objBase, "base", "base", false)
+		for (let i = 0; i < this.links.length - 1; i++) {
+			this.loadObj(this.links[i].model3d, "link" + (i + 1).toString(), "link" + (i).toString(), this.links[i].showFrame)
+		}
+		this.loadObj(this.links[this.links.length - 1].model3d, "link" + (this.links.length).toString(), "link" + (this.links.length).toString(), false)
+
+		this.delta_config = []
+
+		for (let i = 0; i < this.links.length; i++) {
+			if (this.links[i].jointType == 0) {
+				this.delta_config.push(this.shape.getObjectByName("link" + (i).toString()).rotation.z)
+			}
+			if (this.links[i].jointType == 1) {
+				this.delta_config.push(this.shape.getObjectByName("link" + (i).toString()).position.z)
+
+			}
+		}
+
+	}
+
+	loadObj(obj, name1, name2, axisVisible) {
+
+		const manager = new LoadingManager();
+		const objLoader = new OBJLoader(manager);
+		const stlLoader = new STLLoader(manager);
+		const colladaLoader = new ColladaLoader(manager);
+
+		for (let i = 0; i < obj.length; i++) {
+
+
+			if (obj[i].type == "obj") {
+				objLoader.load(obj[i].url, (root) => {
+					root.scale.set(obj[i].scale, obj[i].scale, obj[i].scale);
+					root.applyMatrix4(obj[i].matrix)
+
+					root.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = obj[i].mesh_material;
+						}
+					});
+
+					this.shape.getObjectByName(name2).add(root);
+					this.loadedObjs += 1
+				});
+			}
+			if (obj[i].type == "stl") {
+				stlLoader.load(obj[i].url, (root) => {
+					const mesh = new Mesh(root);
+					mesh.scale.set(obj[i].scale, obj[i].scale, obj[i].scale);
+					mesh.applyMatrix4(obj[i].matrix)
+
+					mesh.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = obj[i].mesh_material;
+						}
+					});
+
+					this.shape.getObjectByName(name2).add(mesh);
+					this.loadedObjs += 1
+				});
+			}
+			if (obj[i].type == "dae") {
+				colladaLoader.load(obj[i].url, (root) => {
+					const group = root.scene;
+					group.scale.set(obj[i].scale, obj[i].scale, obj[i].scale);
+					group.applyMatrix4(obj[i].matrix)
+
+					group.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = obj[i].mesh_material;
+						}
+					});
+
+					this.shape.getObjectByName(name2).add(group);
+					this.loadedObjs += 1
+				});
+			}
+
+		}
+
+		// this.shape.getObjectByName(name1).getObjectByProperty("type", "AxesHelper").visible = axisVisible;
+	}
+
+	hasLoaded() {
+		return this.loadedObjs == this.totalNumberOfObjects;
+	}
+
+	//Function that updates frames
+	showFrame() {
+		//setting robot position
+		this.shape.matrix.set(this.frames[this.currentFrame][1], this.frames[this.currentFrame][2], this.frames[this.currentFrame][3], this.frames[this.currentFrame][4],
+			this.frames[this.currentFrame][5], this.frames[this.currentFrame][6], this.frames[this.currentFrame][7], this.frames[this.currentFrame][8],
+			this.frames[this.currentFrame][9], this.frames[this.currentFrame][10], this.frames[this.currentFrame][11], this.frames[this.currentFrame][12],
+			this.frames[this.currentFrame][13], this.frames[this.currentFrame][14], this.frames[this.currentFrame][15], this.frames[this.currentFrame][16]);
+		//setting robot configuration
+
+		if (this.frames[this.currentFrame][17] != undefined) {
+
+			for (let i = 0; i < this.links.length; i++) {
+				const linkName = "linkFrame" + (i).toString();
+
+				if (this.links[i].jointType == 0) {
+					this.shape.getObjectByName(linkName).rotation.z = this.frames[this.currentFrame][17][i] + this.delta_config[i];
+				} else if (this.links[i].jointType == 1) {
+					this.shape.getObjectByName(linkName).position.z = this.frames[this.currentFrame][17][i] + this.delta_config[i];
+				}
+
+			}
+		}
+	}
+
+	setEnvMapTemp(variable, envMap) {
+		if (variable instanceof Mesh) {
+			variable.material.envMap = envMap;
+			variable.material.needsUpdate = true;
+		}
+		else if (variable instanceof Group) {
+			for (let i = 0; i < variable.children.length; i++) {
+				this.setEnvMapTemp(variable.children[i]);
+			}
+		}
+	}
+	setEnvMap(envMap) {
+		this.setEnvMapTemp(this.shape, envMap);
+	}
+}
+
+//------------------------------------------------------------
+
+//--------------- BASIC ELEMENTS OF ANY SCENE ----------------
+
+Object3D.DefaultUp = new Vector3(0, 0, 1); //Pointing Z axis up
+const canvas = document.getElementById('scene_' + sceneID);// Selecting canvas
+
+const scene = new Scene();//Instantiate the Scene
+scene.background = new Color(backgroundColor);//Set background color
+
+let camera;
+
+if (cameraType == "perspective") {
+	camera = new PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 100);//Instantiate a camera
+}
+if (cameraType == "orthographic") {
+	camera = new OrthographicCamera(-3.2, 3.2, 2.4, -2.4, 0.01, 100);
+}
+
+
+
+var ambientLight = new HemisphereLight('white', 'darkslategrey', 3);//Instantiate Ambient light
+ambientLight.intensity = ambientLightIntensity;
+scene.add(ambientLight);
+
+const controls = new OrbitControls(camera, canvas);	//Instantiate orbit controls
+//controls.target.set(0, 0, 0);//Point camera at the origin
+
+camera.position.set(cameraStartPose[0], cameraStartPose[1], cameraStartPose[2]);
+//camera.rotation.set(cameraStartPose[3], cameraStartPose[4], cameraStartPose[5]);
+camera.lookAt(cameraStartPose[3], cameraStartPose[4], cameraStartPose[5]);
+camera.zoom = cameraStartPose[6];
+camera.updateProjectionMatrix();
+
+const renderer = new WebGLRenderer({ canvas, antialias: true });//Instantiate renderer
+renderer.physicallyCorrectLights = true;//Enable physically Correct Lights
+renderer.setSize(canvas.clientWidth, canvas.clientHeight);//Set render size
+renderer.setPixelRatio(window.devicePixelRatio);//Set pixel ratio
+
+let sceneElements = [];
+
+// if (showWorldFrame) {
+// 	const axesHelper = new AxesHelper(0.5);
+// 	axesHelper.renderOrder = 1;
+// 	scene.add(axesHelper);
+// }
+
+if (showGrid) {
+	const gridHelper = new GridHelper(6, 12);
+	scene.add(gridHelper);
+	gridHelper.rotation.x = 3.14 / 2;
+}
+
+
+
+
+
+//------------------------------------------------------------
+
+//--------------- ADDING ELEMENTS TO THIS SCENE ---------------
+
+//BEGIN DECLARATION OF THE GROUP 'var_group_id_139685190363088'
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685190235408'
+
+const material_var_cylinder_id_139685190235408 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "red",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685190235408 = new Cylinder(0.004,0.5,[[0, 0.0, 1.0, -0.0, 0.25, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -0.0, 0.0, 0, 0, 0, 1]], material_var_cylinder_id_139685190235408);
+sceneElements.push(var_var_cylinder_id_139685190235408);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685190356816'
+
+const material_var_cylinder_id_139685190356816 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "lime",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685190356816 = new Cylinder(0.004,0.5,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 1.0, -0.0, 0.25, 0.0, 0.0, 1.0, 0.0, 0, 0, 0, 1]], material_var_cylinder_id_139685190356816);
+sceneElements.push(var_var_cylinder_id_139685190356816);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685225811088'
+
+const material_var_cylinder_id_139685225811088 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "blue",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685225811088 = new Cylinder(0.004,0.5,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, 0.25, 0, 0, 0, 1]], material_var_cylinder_id_139685225811088);
+sceneElements.push(var_var_cylinder_id_139685225811088);
+
+
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781953296'
+
+const material_var_box_id_140487781953296 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781953296 = new Box(1.1906249604026016,0.01,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 0.005, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 0.805, 0, 0, 0, 1]], material_var_box_id_140487781953296);
+sceneElements.push(var_var_box_id_140487781953296);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781196752'
+
+const material_var_box_id_140487781196752 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781196752 = new Box(1.1906249604026016,0.01,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 0.5901, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 1.3901, 0, 0, 0, 1]], material_var_box_id_140487781196752);
+sceneElements.push(var_var_box_id_140487781196752);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781786768'
+
+const material_var_box_id_140487781786768 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781786768 = new Box(0.004,0.28253288792192033,0.29341430985971645,[[0, 0.584, 0.0, 0.8118, 0.4619, 0.8118, 0.0, -0.584, 0.1206, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.4619, 0.8118, 0.0, -0.584, 0.1206, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781786768);
+sceneElements.push(var_var_box_id_140487781786768);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781234448'
+
+const material_var_box_id_140487781234448 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781234448 = new Box(0.5903124802013008,0.28253288792192033,0.004,[[0, 0.584, 0.0, 0.8118, 0.7538, 0.8118, 0.0, -0.584, 0.2717, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.7538, 0.8118, 0.0, -0.584, 0.2717, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781234448);
+sceneElements.push(var_var_box_id_140487781234448);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781791632'
+
+const material_var_box_id_140487781791632 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781791632 = new Box(0.01,0.28253288792192033,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 0.5149, 0.8118, 0.0, -0.584, -0.2959, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.5149, 0.8118, 0.0, -0.584, -0.2959, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781791632);
+sceneElements.push(var_var_box_id_140487781791632);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781792592'
+
+const material_var_box_id_140487781792592 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781792592 = new Box(0.2901562401006504,0.28253288792192033,0.019,[[0, 0.8118, 0.0, -0.584, 0.4409, -0.584, -0.0, -0.8118, 0.1326, -0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.8118, 0.0, -0.584, 0.4409, -0.584, 0.0, -0.8118, 0.1326, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781792592);
+sceneElements.push(var_var_box_id_140487781792592);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781793232'
+
+const material_var_box_id_140487781793232 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781793232 = new Box(0.2901562401006504,0.28253288792192033,0.019,[[0, 0.584, 0.0, 0.8118, 0.2854, 0.8118, 0.0, -0.584, -0.3157, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.2854, 0.8118, 0.0, -0.584, -0.3157, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781793232);
+sceneElements.push(var_var_box_id_140487781793232);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781791952'
+
+const material_var_box_id_140487781791952 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781791952 = new Box(1.1906249604026016,0.28253288792192033,0.019,[[0, 0.584, 0.0, 0.8118, 0.331, 0.8118, 0.0, -0.584, 0.2061, 0.0, 1.0, -0.0, 0.1513, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.331, 0.8118, 0.0, -0.584, 0.2061, 0.0, 1.0, -0.0, 0.9513, 0, 0, 0, 1]], material_var_box_id_140487781791952);
+sceneElements.push(var_var_box_id_140487781791952);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781234704'
+
+const material_var_box_id_140487781234704 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781234704 = new Box(1.1826249604026016,0.004,0.29341430985971645,[[0, 0.584, 0.0, 0.8118, 0.4578, 0.8118, 0.0, -0.584, 0.1149, 0.0, 1.0, -0.0, 0.012, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.4578, 0.8118, 0.0, -0.584, 0.1149, 0.0, 1.0, -0.0, 0.812, 0, 0, 0, 1]], material_var_box_id_140487781234704);
+sceneElements.push(var_var_box_id_140487781234704);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781221776'
+
+const material_var_box_id_140487781221776 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781221776 = new Box(0.004,0.28253288792192033,0.29341430985971645,[[0, 0.584, 0.0, 0.8118, 0.8043, 0.8118, 0.0, -0.584, 0.5965, 0.0, 1.0, -0.0, 0.1513, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.8043, 0.8118, 0.0, -0.584, 0.5965, 0.0, 1.0, -0.0, 0.9513, 0, 0, 0, 1]], material_var_box_id_140487781221776);
+sceneElements.push(var_var_box_id_140487781221776);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781596944'
+
+const material_var_box_id_140487781596944 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781596944 = new Box(0.004,0.28253288792192033,0.29341430985971645,[[0, 0.584, 0.0, 0.8118, 0.1113, 0.8118, 0.0, -0.584, -0.3668, 0.0, 1.0, -0.0, 0.1513, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.1113, 0.8118, 0.0, -0.584, -0.3668, 0.0, 1.0, -0.0, 0.9513, 0, 0, 0, 1]], material_var_box_id_140487781596944);
+sceneElements.push(var_var_box_id_140487781596944);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781954704'
+
+const material_var_box_id_140487781954704 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781954704 = new Box(1.1906249604026016,0.28253288792192033,0.004,[[0, 0.584, 0.0, 0.8118, 0.5785, 0.8118, 0.0, -0.584, 0.028, 0.0, 1.0, -0.0, 0.1513, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.5785, 0.8118, 0.0, -0.584, 0.028, 0.0, 1.0, -0.0, 0.9513, 0, 0, 0, 1]], material_var_box_id_140487781954704);
+sceneElements.push(var_var_box_id_140487781954704);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781780112'
+
+const material_var_box_id_140487781780112 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781780112 = new Box(0.01,0.5950657758438407,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 1.0407, 0.8118, 0.0, -0.584, 0.4351, 0.0, 1.0, -0.0, 0.2975, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 1.0407, 0.8118, 0.0, -0.584, 0.4351, 0.0, 1.0, -0.0, 1.0975, 0, 0, 0, 1]], material_var_box_id_140487781780112);
+sceneElements.push(var_var_box_id_140487781780112);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781092176'
+
+const material_var_box_id_140487781092176 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781092176 = new Box(0.01,0.5950657758438407,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 0.3396, 0.8118, 0.0, -0.584, -0.5396, 0.0, 1.0, -0.0, 0.2975, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.3396, 0.8118, 0.0, -0.584, -0.5396, 0.0, 1.0, -0.0, 1.0975, 0, 0, 0, 1]], material_var_box_id_140487781092176);
+sceneElements.push(var_var_box_id_140487781092176);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487782830544'
+
+const material_var_box_id_140487782830544 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487782830544 = new Box(1.2106249604026016,0.5950657758438407,0.01,[[0, 0.584, 0.0, 0.8118, 0.8202, 0.8118, 0.0, -0.584, -0.1458, 0.0, 1.0, -0.0, 0.2975, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.8202, 0.8118, 0.0, -0.584, -0.1458, 0.0, 1.0, -0.0, 1.0975, 0, 0, 0, 1]], material_var_box_id_140487782830544);
+sceneElements.push(var_var_box_id_140487782830544);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487782826256'
+
+const material_var_box_id_140487782826256 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487782826256 = new Box(1.1906249604026016,0.01,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 0.2975, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 1.0975, 0, 0, 0, 1]], material_var_box_id_140487782826256);
+sceneElements.push(var_var_box_id_140487782826256);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781584144'
+
+const material_var_box_id_140487781584144 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781584144 = new Box(0.01,0.28253288792192033,0.33046034428857385,[[0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.6901, 0.8118, 0.0, -0.584, -0.0523, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781584144);
+sceneElements.push(var_var_box_id_140487781584144);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487781781904'
+
+const material_var_box_id_140487781781904 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487781781904 = new Box(0.5903124802013008,0.28253288792192033,0.019,[[0, 0.584, 0.0, 0.8118, 0.5063, 0.8118, 0.0, -0.584, 0.4498, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.5063, 0.8118, 0.0, -0.584, 0.4498, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487781781904);
+sceneElements.push(var_var_box_id_140487781781904);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487782831184'
+
+const material_var_box_id_140487782831184 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487782831184 = new Box(0.5823124802013008,0.004,0.29341430985971645,[[0, 0.584, 0.0, 0.8118, 0.6331, 0.8118, 0.0, -0.584, 0.3585, 0.0, 1.0, -0.0, 0.3045, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.6331, 0.8118, 0.0, -0.584, 0.3585, 0.0, 1.0, -0.0, 1.1045, 0, 0, 0, 1]], material_var_box_id_140487782831184);
+sceneElements.push(var_var_box_id_140487782831184);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487782832208'
+
+const material_var_box_id_140487782832208 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487782832208 = new Box(0.004,0.28253288792192033,0.29341430985971645,[[0, 0.584, 0.0, 0.8118, 0.8043, 0.8118, 0.0, -0.584, 0.5965, 0.0, 1.0, -0.0, 0.4438, 0, 0, 0, 1], [0, 0.584, 0.0, 0.8118, 0.8043, 0.8118, 0.0, -0.584, 0.5965, 0.0, 1.0, -0.0, 1.2438, 0, 0, 0, 1]], material_var_box_id_140487782832208);
+sceneElements.push(var_var_box_id_140487782832208);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487782828176'
+
+const material_var_box_id_140487782828176 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487782828176 = new Box(0.3,0.8,0.25,[[0, 1.0, 0.0, -0.0, -0.05, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, -0.4, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, -0.05, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, 0.4, 0, 0, 0, 1]], material_var_box_id_140487782828176);
+sceneElements.push(var_var_box_id_140487782828176);
+
+//BEGIN DECLARATION OF THE ROBOT 'var_robot_id_139685190232400'
+
+const object3d_base_var_robot_id_139685190232400_list = [];
+
+const material_var_robot_id_139685190232400_obj_base_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_var_robot_id_139685190232400_obj_base_0 = new Matrix4(); 
+htm_var_robot_id_139685190232400_obj_base_0.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+const object3d_var_robot_id_139685190232400_obj_base_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link0.obj',
+scale: 1,
+matrix: htm_var_robot_id_139685190232400_obj_base_0,
+type: 'obj',
+mesh_material: material_var_robot_id_139685190232400_obj_base_0};
+
+object3d_base_var_robot_id_139685190232400_list.push(object3d_var_robot_id_139685190232400_obj_base_0);
+
+const list_links_var_robot_id_139685190232400 = [];
+
+const object3d_link_0_var_robot_id_139685190232400_list = [];
+
+const material_link_0_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_0_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_0_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,0.0,0.0,0.0008,-1.0,0.0,0.0,1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_0_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link1.obj',
+scale: 1,
+matrix: htm_link_0_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_0_var_robot_id_139685190232400_obj_0};
+
+object3d_link_0_var_robot_id_139685190232400_list.push(object3d_link_0_var_robot_id_139685190232400_obj_0);
+
+const link_0_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.333, 
+a: 0.0, 
+alpha: -1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_0_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_0_var_robot_id_139685190232400);
+
+const object3d_link_1_var_robot_id_139685190232400_list = [];
+
+const material_link_1_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_1_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_1_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,0.0,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_1_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link2.obj',
+scale: 1,
+matrix: htm_link_1_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_1_var_robot_id_139685190232400_obj_0};
+
+object3d_link_1_var_robot_id_139685190232400_list.push(object3d_link_1_var_robot_id_139685190232400_obj_0);
+
+const link_1_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.0, 
+a: 0.0, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_1_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_1_var_robot_id_139685190232400);
+
+const object3d_link_2_var_robot_id_139685190232400_list = [];
+
+const material_link_2_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_2_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_2_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,-0.0825,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_2_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link3.obj',
+scale: 1,
+matrix: htm_link_2_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_2_var_robot_id_139685190232400_obj_0};
+
+object3d_link_2_var_robot_id_139685190232400_list.push(object3d_link_2_var_robot_id_139685190232400_obj_0);
+
+const link_2_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.316, 
+a: 0.0825, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_2_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_2_var_robot_id_139685190232400);
+
+const object3d_link_3_var_robot_id_139685190232400_list = [];
+
+const material_link_3_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_3_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_3_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,0.0825,0.0,0.0008,-1.0,0.0,0.0,1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_3_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link4.obj',
+scale: 1,
+matrix: htm_link_3_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_3_var_robot_id_139685190232400_obj_0};
+
+object3d_link_3_var_robot_id_139685190232400_list.push(object3d_link_3_var_robot_id_139685190232400_obj_0);
+
+const link_3_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.0, 
+a: -0.0825, 
+alpha: -1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_3_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_3_var_robot_id_139685190232400);
+
+const object3d_link_4_var_robot_id_139685190232400_list = [];
+
+const material_link_4_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_4_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_4_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,0.0,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_4_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link5.obj',
+scale: 1,
+matrix: htm_link_4_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_4_var_robot_id_139685190232400_obj_0};
+
+object3d_link_4_var_robot_id_139685190232400_list.push(object3d_link_4_var_robot_id_139685190232400_obj_0);
+
+const link_4_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.384, 
+a: 0.0, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_4_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_4_var_robot_id_139685190232400);
+
+const object3d_link_5_var_robot_id_139685190232400_list = [];
+
+const material_link_5_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_5_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_5_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,-0.088,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_5_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link6.obj',
+scale: 1,
+matrix: htm_link_5_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_5_var_robot_id_139685190232400_obj_0};
+
+object3d_link_5_var_robot_id_139685190232400_list.push(object3d_link_5_var_robot_id_139685190232400_obj_0);
+
+const link_5_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.0, 
+a: 0.088, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_5_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_5_var_robot_id_139685190232400);
+
+const object3d_link_6_var_robot_id_139685190232400_list = [];
+
+const material_link_6_var_robot_id_139685190232400_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_6_var_robot_id_139685190232400_obj_0 = new Matrix4(); 
+htm_link_6_var_robot_id_139685190232400_obj_0.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,-0.177,0.0,0.0,0.0,1.0);
+const object3d_link_6_var_robot_id_139685190232400_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link7.obj',
+scale: 1,
+matrix: htm_link_6_var_robot_id_139685190232400_obj_0,
+type: 'obj',
+mesh_material: material_link_6_var_robot_id_139685190232400_obj_0};
+
+object3d_link_6_var_robot_id_139685190232400_list.push(object3d_link_6_var_robot_id_139685190232400_obj_0);
+const material_link_6_var_robot_id_139685190232400_obj_1 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_6_var_robot_id_139685190232400_obj_1 = new Matrix4(); 
+htm_link_6_var_robot_id_139685190232400_obj_1.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,-0.06699999999999999,0.0,0.0,0.0,1.0);
+const object3d_link_6_var_robot_id_139685190232400_obj_1={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/hand.obj',
+scale: 1,
+matrix: htm_link_6_var_robot_id_139685190232400_obj_1,
+type: 'obj',
+mesh_material: material_link_6_var_robot_id_139685190232400_obj_1};
+
+object3d_link_6_var_robot_id_139685190232400_list.push(object3d_link_6_var_robot_id_139685190232400_obj_1);
+
+const link_6_var_robot_id_139685190232400 = {
+theta: 0.0, 
+d: 0.177, 
+a: 0.0, 
+alpha: 0.0, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_6_var_robot_id_139685190232400_list}; 
+ 
+list_links_var_robot_id_139685190232400.push(link_6_var_robot_id_139685190232400);
+
+const htm_var_robot_id_139685190232400_base_0 = new Matrix4(); 
+htm_var_robot_id_139685190232400_base_0.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+const htm_var_robot_id_139685190232400_n_eef = new Matrix4(); 
+htm_var_robot_id_139685190232400_n_eef.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+const var_var_robot_id_139685190232400 = new Robot(object3d_base_var_robot_id_139685190232400_list, list_links_var_robot_id_139685190232400,[[0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [0.0, 0.0, 0.0, -0.06981317007977318, 0.0, 0.0, 0.0]], [0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [0.21916739105625788, 0.5465470781995819, 0.5214862322213025, -1.0857173467872308, -0.26190263134039915, 1.571111357417417, -2.1730188349113093]]], htm_var_robot_id_139685190232400_base_0, htm_var_robot_id_139685190232400_n_eef,true);
+sceneElements.push(var_var_robot_id_139685190232400);
+
+//BEGIN DECLARATION OF THE GROUP 'var_group_id_139685190229648'
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685190199056'
+
+const material_var_cylinder_id_139685190199056 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "red",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685190199056 = new Cylinder(0.004,0.1,[[0, 0.0, 1.0, -0.0, 0.05, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -0.0, 0.0, 0, 0, 0, 1], [0, 0.0698, 0.9976, 0.0, 0.1523, -0.0, 0.0, 1.0, 0.0, 0.9976, -0.0698, 0.0, 1.6516, 0, 0, 0, 1], [0, 0.0698, 0.9976, 0.0, 0.1523, -0.0, 0.0, 1.0, 0.0, 0.9976, -0.0698, 0.0, 1.6516, 0, 0, 0, 1], [0, 0.0, -0.9574, -0.2889, 0.5449, -0.0, 0.2889, -0.9574, 0.3821, 1.0, 0.0, -0.0, 1.2684, 0, 0, 0, 1]], material_var_cylinder_id_139685190199056);
+sceneElements.push(var_var_cylinder_id_139685190199056);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685190365904'
+
+const material_var_cylinder_id_139685190365904 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "lime",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685190365904 = new Cylinder(0.004,0.1,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 1.0, -0.0, 0.05, 0.0, 0.0, 1.0, 0.0, 0, 0, 0, 1], [0, 0.9976, -0.0, -0.0698, 0.1024, 0.0, -1.0, 0.0, -0.05, -0.0698, -0.0, -0.9976, 1.6551, 0, 0, 0, 1], [0, 0.9976, -0.0, -0.0698, 0.1024, 0.0, -1.0, 0.0, -0.05, -0.0698, -0.0, -0.9976, 1.6551, 0, 0, 0, 1], [0, -0.9574, 0.2889, -0.0, 0.6072, 0.2889, 0.9574, 0.0, 0.4155, 0.0, 0.0, -1.0, 1.2684, 0, 0, 0, 1]], material_var_cylinder_id_139685190365904);
+sceneElements.push(var_var_cylinder_id_139685190365904);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685190357840'
+
+const material_var_cylinder_id_139685190357840 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "blue",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685190357840 = new Cylinder(0.004,0.1,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, 0.05, 0, 0, 0, 1], [0, 0.9976, -0.0698, 0.0, 0.0989, 0.0, 0.0, 1.0, 0.0, -0.0698, -0.9976, 0.0, 1.6052, 0, 0, 0, 1], [0, 0.9976, -0.0698, 0.0, 0.0989, 0.0, 0.0, 1.0, 0.0, -0.0698, -0.9976, 0.0, 1.6052, 0, 0, 0, 1], [0, -0.9574, -0.0, -0.2889, 0.5927, 0.2889, 0.0, -0.9574, 0.3676, 0.0, -1.0, -0.0, 1.2184, 0, 0, 0, 1]], material_var_cylinder_id_139685190357840);
+sceneElements.push(var_var_cylinder_id_139685190357840);
+
+
+
+//BEGIN DECLARATION OF THE GROUP 'var_group_id_139685190200720'
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685498125072'
+
+const material_var_cylinder_id_139685498125072 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "red",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685498125072 = new Cylinder(0.004,0.1,[[0, 0.0002, -0.8662, -0.4997, 0.2758, -0.0, 0.4997, -0.8662, -0.016, 1.0, 0.0002, 0.0001, 1.1095, 0, 0, 0, 1]], material_var_cylinder_id_139685498125072);
+sceneElements.push(var_var_cylinder_id_139685498125072);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685190195856'
+
+const material_var_cylinder_id_139685190195856 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "lime",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685190195856 = new Cylinder(0.004,0.1,[[0, -0.8662, 0.4997, -0.0002, 0.3441, 0.4997, 0.8662, 0.0, 0.0023, 0.0002, -0.0001, -1.0, 1.1095, 0, 0, 0, 1]], material_var_cylinder_id_139685190195856);
+sceneElements.push(var_var_cylinder_id_139685190195856);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139685497469520'
+
+const material_var_cylinder_id_139685497469520 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "blue",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139685497469520 = new Cylinder(0.004,0.1,[[0, -0.8662, -0.0002, -0.4997, 0.3191, 0.4997, 0.0, -0.8662, -0.041, 0.0002, -1.0, 0.0001, 1.0595, 0, 0, 0, 1]], material_var_cylinder_id_139685497469520);
+sceneElements.push(var_var_cylinder_id_139685497469520);
+
+
+//USER INPUT GOES HERE
+
+
+
+// add stuff to the scene
+for (let i = 0; i < sceneElements.length; i++) {
+	if (typeof sceneElements[i].shape != "undefined") {
+		scene.add(sceneElements[i].shape);
+	}
+}
+
+
+
+//Add LDR to the scene
+if (!(ldrUrls.length == 0)) {
+	const pmremGenerator = new PMREMGenerator(renderer);
+	var ldrCubeMap = new CubeTextureLoader().load(ldrUrls, function () {
+
+		var ldrCubeRenderTarget = pmremGenerator.fromCubemap(ldrCubeMap);
+
+		ldrCubeMap.encoding = sRGBEncoding;
+
+
+		for (let i = 0; i < sceneElements.length; i++) {
+			sceneElements[i].setEnvMap(ldrCubeRenderTarget.texture);
+		}
+		scene.background = ldrCubeMap;
+	});
+	renderer.toneMappingExposure = 1.0;
+}
+
+
+
+//Add gui
+var gui = new GUI({ autoPlace: false, width: "800px" });
+var customContainer = document.getElementById('canvas_container_' + sceneID);
+customContainer.appendChild(gui.domElement);
+
+var automaticPlay = true;
+var manualTime = 0;
+
+gui.add({ Progress: 0 }, "Progress", 0, maxTime, 0.01).onChange(function (value) {
+	automaticPlay = false;
+	manualTime = value + 0.0001;
+	btn.innerHTML = "&#9654";
+})
+customContainer.getElementsByClassName('c')[0].style.width = (canvas.clientWidth - 20).toString() + 'px';
+customContainer.getElementsByClassName('dg main')[0].style.width = canvas.clientWidth.toString() + 'px';
+customContainer.getElementsByClassName('dg main')[0].style.right = '0px'; //0
+customContainer.getElementsByClassName('dg main')[0].style.top = '0px'; //550
+customContainer.getElementsByClassName('dg main')[0].style.position = 'relative'; //absolute
+customContainer.getElementsByClassName('close-button close-bottom')[0].style.height = '0px';
+customContainer.getElementsByClassName('close-button close-bottom')[0].innerHTML = '';
+customContainer.getElementsByClassName('property-name')[0].innerHTML = '';
+customContainer.getElementsByClassName('slider')[0].style.width = (canvas.clientWidth - 100).toString() + 'px'
+customContainer.getElementsByClassName('slider-fg')[0].style.backgroundColor = '#19bd39'
+customContainer.querySelectorAll("input[type=text]")[0].style.width = '50px';
+customContainer.querySelectorAll("input[type=text]")[0].style.color = '#19bd39';
+
+customContainer.getElementsByClassName('dg')[0].style.borderLeft = '4px solid #1a1a1a'
+customContainer.getElementsByClassName('cr')[0].style.borderLeft = '4px solid #1a1a1a'
+customContainer.getElementsByClassName('number')[0].style.borderLeft = '4px solid #1a1a1a'
+var recoveryCurrentTime = false;
+
+let btn = document.createElement("button");
+btn.style.backgroundColor = "#1a1a1a";
+btn.style.color = "#19bd39";
+btn.style.border = "none";
+btn.style.height = "28px";
+btn.style.width = "28px";
+btn.innerHTML = "||";
+btn.onclick = function () {
+
+	automaticPlay = !automaticPlay;
+
+	if (automaticPlay) {
+		btn.innerHTML = "||";
+		recoveryCurrentTime = true;
+	}
+	else {
+		manualTime = parseFloat(customContainer.querySelectorAll("input[type=text]")[0].value) + 0.0001;
+		btn.innerHTML = "&#9654";
+	}
+
+};
+customContainer.getElementsByClassName('c')[0].style.verticalAlign = "middle"
+customContainer.getElementsByClassName('c')[0].appendChild(btn);
+//------------------------------------------------------------
+
+//Wait until all objects loaded
+
+var loadedAll = false;
+var sceneDrawn = false;
+
+
+//Get starting ms
+var startMs = elapsedMs()
+
+//Initialize
+var heightScene;
+var heightBar;
+
+document.getElementsByClassName('controller')[0].appendChild(customContainer.getElementsByClassName('dg main')[0])
+document.getElementsByClassName('controller')[0].style.opacity = "0"
+
+heightScene = document.getElementById('scene_' + sceneID).style.height;
+document.getElementById('scene_' + sceneID).style.visibility = 'hidden';
+document.getElementById('scene_' + sceneID).style.height = '0px';
+
+heightBar = customContainer.getElementsByClassName('dg main')[0].style.height;
+customContainer.getElementsByClassName('dg main')[0].style.visibility = 'hidden';
+customContainer.getElementsByClassName('dg main')[0].style.height = '0px';
+
+
+//-------------------- THE ANIMATION LOOP -------------------
+
+
+
+renderer.setAnimationLoop(() => {
+
+
+	loadedAll = true;
+
+	for (let i = 0; i < sceneElements.length; i++) {
+		loadedAll = loadedAll && sceneElements[i].hasLoaded();
+	}
+
+	if (!loadedAll) {
+		startMs = elapsedMs();
+	}
+	else {
+		//document.getElementById('canvas_container').style.visibility = 'visible';
+		if ((elapsedMs() - startMs > delay) && !sceneDrawn) {
+			document.getElementById('scene_' + sceneID).style.visibility = 'visible';
+			document.getElementById('canvas_container_' + sceneID).getElementsByClassName('dg main')[0].style.visibility = 'visible';
+			document.getElementById('scene_' + sceneID).style.height = heightScene;
+			document.getElementById('canvas_container_' + sceneID).getElementsByClassName('dg main')[0].style.height = heightBar;
+			document.getElementById('loading_screen_' + sceneID).remove();
+			sceneDrawn = true;
+		}
+	}
+
+
+	//MAGIC HAPPENS HERE!!!
+	if (loadedAll && automaticPlay) {
+
+		var currentSeconds;
+		if (!recoveryCurrentTime) {
+
+			for (let i = 0; i < sceneElements.length; i++) {
+				sceneElements[i].nextFrame();
+				sceneElements[i].showFrame();
+			}
+
+			currentSeconds = Math.min(0.001 * Math.max(elapsedMs() - startMs - delay, 0), maxTime);
+
+			var percentage = (100 * currentSeconds / (0.000001 + maxTime)).toString();
+			customContainer.getElementsByClassName('slider-fg')[0].style.width = percentage + "%";
+			customContainer.querySelectorAll("input[type=text]")[0].value = Math.round(100 * currentSeconds) / 100;
+		}
+		else {
+			currentSeconds = customContainer.querySelectorAll("input[type=text]")[0].value;
+			startMs = elapsedMs() - delay - 1000 * currentSeconds;
+			recoveryCurrentTime = false;
+		}
+
+	}
+	if (loadedAll && !automaticPlay) {
+		for (let i = 0; i < sceneElements.length; i++) {
+			sceneElements[i].setFrameTime(manualTime);
+			sceneElements[i].showFrame();
+		}
+	}
+
+	renderer.render(scene, camera);
+});
+//------------------------------------------------------------
+ </script>
+ </body>
+ </html>

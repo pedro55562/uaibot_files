@@ -1,0 +1,2174 @@
+<html>
+<style>
+.controller:hover{opacity:1 !important;}
+</style>
+<body>
+<div id='canvas_container_17456087786727138' style='width:960px;height:720px;position:relative'>
+<div id='loading_screen_17456087786727138' style='width:960px;height:720px;position:relative; background-color: #19bd39;text-align:center;align-items:center;display:flex;justify-content:center'> 
+ <img src='https://cdn.jsdelivr.net/gh/viniciusmgn/uaibot_content@master/contents/SVG/logo_uai_bot.svg' style='width:200px;height:114px'/>
+ </div>
+<script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js'></script>
+<canvas id='scene_17456087786727138' width='960px' height='720px'></canvas>
+<!-- USER DIVS GO HERE --><div class = 'controller' style='width:960px;height:30px;'></div>
+</div>
+
+ <script type="module">
+import {
+	Object3D, Vector3, BoxBufferGeometry, Color, Mesh, MeshBasicMaterial, PerspectiveCamera, OrthographicCamera,
+	Scene, WebGLRenderer, AmbientLight, DirectionalLight, HemisphereLight, MeshStandardMaterial,
+	AxesHelper, GridHelper, Matrix4, SphereBufferGeometry, CylinderBufferGeometry, ConeGeometry, Group, LoadingManager, MeshPhysicalMaterial, Vector2, FrontSide,
+	BackSide, DoubleSide, PMREMGenerator, TextureLoader, PointLight, UVMapping, CubeReflectionMapping, CubeRefractionMapping,
+	EquirectangularReflectionMapping, EquirectangularRefractionMapping, CubeUVReflectionMapping,
+	CubeUVRefractionMapping, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping,
+	NearestFilter, LinearFilter, NearestMipmapNearestFilter, NearestMipmapLinearFilter, LinearMipmapNearestFilter,
+	LinearMipmapLinearFilter, BufferGeometry, Float32BufferAttribute, PointsMaterial, Points, ArrowHelper, TextGeometry, CubeTextureLoader, sRGBEncoding
+} from 'https://cdn.skypack.dev/three@0.135.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/controls/OrbitControls.js';
+import { OBJLoader } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/OBJLoader.js';
+import { STLLoader } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/STLLoader.js';
+import { ColladaLoader } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/ColladaLoader.js';
+import { GUI } from 'https://cdn.skypack.dev/dat.gui';
+import { ParametricGeometry } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/geometries/ParametricGeometry.js'
+
+
+//--------------------SIMULATION ELEMENTS---------------------
+
+const delay = 500; 
+ const maxTime = 1.85; 
+ const cameraType= 'perspective'; 
+ const sceneID= '17456087786727138'; 
+ const showWorldFrame=true; 
+ const showGrid=true; 
+ const backgroundColor='#F5F6FA'; 
+ const ambientLightIntensity = 4;
+ const ldrUrls = [];
+ const cameraStartPose = [1.76, 1.1, 1.45, 0.0, 0.0, 0.0, 1.0];
+ //SIMULATION PARAMETERS GO HERE
+
+function elapsedMs() {
+	return (new Date()).getTime();
+}
+
+
+class Objsim {
+	constructor(_frames) {
+		this.frames = _frames;
+		this.currentFrame = 0;
+		this.shape = "I HAVE NO SHAPE YET";
+	}
+
+	hasLoaded() {
+		return true;
+	}
+
+	nextFrame() {
+		while ((this.currentFrame < this.frames.length - 1) && (1000 * this.frames[this.currentFrame + 1][0] + delay < (elapsedMs() - startMs))) {
+			this.currentFrame += 1;
+		}
+	}
+	setFrameTime(time) {
+		this.currentFrame = 0;
+		while ((this.currentFrame < this.frames.length - 1) && (this.frames[this.currentFrame + 1][0] < time)) {
+			this.currentFrame += 1;
+		}
+	}
+	showFrame() {
+		this.shape.matrix.set(this.frames[this.currentFrame][1], this.frames[this.currentFrame][2], this.frames[this.currentFrame][3], this.frames[this.currentFrame][4],
+			this.frames[this.currentFrame][5], this.frames[this.currentFrame][6], this.frames[this.currentFrame][7], this.frames[this.currentFrame][8],
+			this.frames[this.currentFrame][9], this.frames[this.currentFrame][10], this.frames[this.currentFrame][11], this.frames[this.currentFrame][12],
+			this.frames[this.currentFrame][13], this.frames[this.currentFrame][14], this.frames[this.currentFrame][15], this.frames[this.currentFrame][16]);
+
+
+	}
+	setEnvMap(envMap) {
+		this.shape.material.envMap = envMap;
+		this.shape.material.needsUpdate = true;
+	}
+}
+
+class Box extends Objsim {
+	constructor(_width, _height, _depth, _frames, _material) {
+		super(_frames);
+		this.width = _width;
+		this.height = _height;
+		this.depth = _depth;
+		const geometry = new BoxBufferGeometry(this.width, this.height, this.depth);
+		const cube = new Mesh(geometry, _material);
+		cube.matrixAutoUpdate = false;
+		this.shape = cube;
+	}
+}
+
+class Ball extends Objsim {
+	constructor(_radius, _frames, _material) {
+		super(_frames);
+		this.radius = _radius;
+		const geometry = new SphereBufferGeometry(this.radius, 64, 32);
+		const sphere = new Mesh(geometry, _material);
+		sphere.matrixAutoUpdate = false;
+		this.shape = sphere;
+	}
+}
+
+class Cylinder extends Objsim {
+	constructor(_radius, _height, _frames, _material) {
+		super(_frames);
+		this.radius = _radius;
+		this.height = _height;
+		const geometry = new CylinderBufferGeometry(this.radius, this.radius, this.height, 20);
+		const cylinder = new Mesh(geometry, _material);
+		cylinder.matrixAutoUpdate = false;
+		this.shape = cylinder;
+	}
+}
+
+class Cone extends Objsim {
+	constructor(_radius, _height, _frames, _material) {
+		super(_frames);
+		this.radius = _radius;
+		this.height = _height;
+		const geometry = new ConeGeometry(this.radius, this.height, 20, 5, false, 0.0, 6.28);
+		const cone = new Mesh(geometry, _material);
+		cone.matrixAutoUpdate = false;
+		this.shape = cone;
+	}
+}
+
+function signFun(x, n) {
+	return Math.sign(x) * (Math.pow(Math.abs(x), n))
+}
+
+class SmoothBox extends Objsim {
+
+
+
+	constructor(_width, _height, _depth, _frames, _material) {
+		super(_frames);
+		this.width = _width;
+		this.height = _height;
+		this.depth = _depth;
+
+		const geometry = new ParametricGeometry(function fun(u, v, target) {
+			let cosu = signFun(Math.cos(0.0001 * Math.PI + 0.9999 * Math.PI * u), 0.5)
+			let sinu = signFun(Math.sin(0.0001 * Math.PI + 0.9999 * Math.PI * u), 0.5)
+			let cosv = signFun(Math.cos(2 * Math.PI * v), 0.5)
+			let sinv = signFun(Math.sin(2 * Math.PI * v), 0.5)
+
+			let x = (_width / 2) * sinu * cosv;
+			let y = (_height / 2) * sinu * sinv;
+			let z = (_depth / 2) * cosu;
+
+			target.set(x, y, z);
+
+		}, 25, 25);
+
+
+		const smoothCube = new Mesh(geometry, _material);
+		smoothCube.matrixAutoUpdate = false;
+		this.shape = smoothCube;
+	}
+
+
+
+}
+
+class ConvexPolytope extends Objsim {
+
+
+
+	constructor(_vertexes, _faces, _frames, _material) {
+		super(_frames);
+		this.vertexes = _vertexes;
+		this.faces = _faces;
+
+
+		const geometry = new BufferGeometry();
+		const verticesArray = [];
+		const indicesArray = [];
+
+		// this.vertexes.forEach(v => {
+		// 	verticesArray.push(v[0], v[1], v[2]);
+		// });
+
+		this.vertexes.forEach(v => {
+			verticesArray.push(v[0], v[2], -v[1]);
+		});
+
+		this.faces.forEach(f => {
+			indicesArray.push(f[0], f[2], f[1]);
+		});
+
+		// this.faces.forEach(f => {
+		// 	indicesArray.push(f[0], f[1], f[2]);
+		// });
+
+
+		geometry.setAttribute(
+			"position",
+			new Float32BufferAttribute(verticesArray, 3)
+		);
+		geometry.setIndex(indicesArray);
+		geometry.computeVertexNormals();
+
+		const polytope = new Mesh(geometry, _material);
+		polytope.matrixAutoUpdate = false;
+		this.shape = polytope;
+	}
+
+
+
+}
+
+class PointCloud extends Objsim {
+
+	constructor(_points, _frames, _color, _size) {
+		super(_frames);
+
+		this.color = _color;
+		this.points = _points
+		this.size = _size;
+
+		const vertices = []
+		const geometry = new BufferGeometry();
+		geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+		const material = new PointsMaterial({ color: this.color, size: this.size });
+		this.shape = new Points(geometry, material);
+	}
+
+	showFrame() {
+		const vertices = [];
+
+		for (let i = this.frames[this.currentFrame][1]; i < this.frames[this.currentFrame][2]; i++) {
+			vertices.push(this.points[0][i], this.points[1][i], this.points[2][i]);
+		}
+
+		this.shape.geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+
+	}
+
+	setEnvMap(envMap) { }
+
+}
+
+class RigidObject extends Objsim {
+
+	constructor(_frames, _list_3dobject) {
+		super(_frames);
+
+		this.shape = new Group();
+		this.shape.matrixAutoUpdate = false;
+
+		const manager = new LoadingManager();
+
+		let loader;
+
+		for (let i = 0; i < _list_3dobject.length; i++) {
+			const _3dobject = _list_3dobject[i];
+			if (_3dobject.type === 'obj') {
+				loader = new OBJLoader(manager);
+				loader.load(_3dobject.url, (root) => {
+
+					root.scale.set(_3dobject.scale, _3dobject.scale, _3dobject.scale);
+					root.applyMatrix4(_3dobject.matrix)
+
+					root.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = _3dobject.mesh_material;
+						}
+					});
+
+					this.shape.add(root);
+				});
+			}
+			if (_3dobject.type === 'stl') {
+				loader = new STLLoader(manager);
+				loader.load(_3dobject.url, (root) => {
+					const mesh = new Mesh(root);
+
+					mesh.scale.set(_3dobject.scale, _3dobject.scale, _3dobject.scale);
+					mesh.applyMatrix4(_3dobject.matrix)
+
+					mesh.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = _3dobject.mesh_material;
+						}
+					});
+
+					this.shape.add(mesh);
+				});
+			}
+			if (_3dobject.type === 'dae') {
+				loader = new ColladaLoader(manager);
+				loader.load(_3dobject.url, (root) => {
+					const group = root.scene;
+
+					group.scale.set(_3dobject.scale, _3dobject.scale, _3dobject.scale);
+					group.applyMatrix4(_3dobject.matrix)
+
+					group.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = _3dobject.mesh_material;
+						}
+					});
+
+					this.shape.add(group);
+				});
+			}
+		}
+
+	}
+
+	setEnvMapTemp(variable, envMap) {
+		if (variable instanceof Mesh) {
+			variable.material.envMap = envMap;
+			variable.material.needsUpdate = true;
+		}
+		else if (variable instanceof Group) {
+			for (let i = 0; i < variable.children.length; i++) {
+				this.setEnvMapTemp(variable.children[i]);
+			}
+		}
+	}
+	setEnvMap(envMap) {
+		this.setEnvMapTemp(this.shape, envMap);
+	}
+
+}
+
+class Vector extends Objsim {
+
+
+	constructor(_frames, _color, _thickness, _origin, _dir, _length) {
+		super(_frames);
+
+		this.color = _color;
+		this.thickness = _thickness
+		this.origin = new Vector3(_origin[0], _origin[1], _origin[2]);
+		this.dir = new Vector3(_dir[0], _dir[1], _dir[2]);
+		this._length = length
+
+		this.shape = new ArrowHelper(this.dir, this.origin, this.length, this.color);
+		this.shape.line.material.linewidth = this.thickness;
+
+	}
+
+	showFrame() {
+		this.shape.setLength(this.frames[this.currentFrame][3]);
+		const dir = this.frames[this.currentFrame][2];
+		const origin = this.frames[this.currentFrame][1];
+
+		this.shape.setDirection(new Vector3(dir[0], dir[1], dir[2]));
+		this.shape.position.set(origin[0], origin[1], origin[2]);
+	}
+	setEnvMap(envMap) { }
+}
+
+class PointLightSim extends Objsim {
+
+
+	constructor(_frames) {
+		super(_frames);
+		this.shape = new PointLight(this.frames[0][1], this.frames[0][2], this.frames[0][3]);
+		this.shape.position.set(this.frames[0][4][0], this.frames[0][4][1], this.frames[0][4][2]);
+	}
+
+	showFrame() {
+		this.shape.color.set(this.frames[this.currentFrame][1]);
+		this.shape.intensity = this.frames[this.currentFrame][2];
+		this.shape.distance = this.frames[this.currentFrame][3];
+		this.shape.position.set(this.frames[this.currentFrame][4][0], this.frames[this.currentFrame][4][1], this.frames[this.currentFrame][4][2]);
+	}
+	setEnvMap(envMap) { }
+}
+
+class HTMLDiv extends Objsim {
+
+	constructor(_id, _frames) {
+		super(_frames);
+		this.id = _id;
+		this.shape = undefined;
+	}
+
+	showFrame() {
+		var element = document.getElementById(this.id);
+
+		element.innerHTML = this.frames[this.currentFrame][1];
+		element.style.position = "absolute";
+		element.style = this.frames[this.currentFrame][2];
+	}
+	setEnvMap(envMap) { }
+}
+
+class Robot extends Objsim {
+
+	constructor(_objBase, _link, _frames, _htm_base_0, _htm_n_eef, _eef_frame_visible) {
+		super(_frames);
+
+		this.loadedObjs = 0
+		this.links = _link;
+
+		this.totalNumberOfObjects = _objBase.length;
+
+		for (let i = 0; i < this.links.length; i++) {
+			this.totalNumberOfObjects += this.links[i].model3d.length;
+		}
+
+		this.htm_base_0 = _htm_base_0;
+
+		//Function that creates a generic robot
+		const base = new Group();
+		base.name = "base";
+
+		const baseFrame = new Group();
+		baseFrame.name = "baseFrame";
+		baseFrame.applyMatrix4(this.htm_base_0);
+
+
+		//Create link groups
+		let linkGroupList = [];
+
+		for (let i = 0; i <= this.links.length; i++) {
+
+			var linkGroup = new Group();
+			linkGroup.name = "linkFrame" + i.toString();
+			linkGroupList.push(linkGroup);
+
+			linkGroup = new Group();
+			linkGroup.name = "link" + i.toString();
+			//var axesHelper = new AxesHelper(0.2);
+			//axesHelper.matrixAutoUpdate = false;
+			//axesHelper.visible = true;
+			//linkGroup.add(axesHelper)
+
+			if (i < this.links.length) {
+				linkGroup.rotateZ(this.links[i].theta);
+				linkGroup.translateZ(this.links[i].d);
+				linkGroup.rotateX(this.links[i].alpha);
+				linkGroup.translateX(this.links[i].a);
+			}
+
+
+			linkGroup.updateMatrix();
+
+			linkGroupList.push(linkGroup);
+		}
+
+		var linkGroup = new Group();
+		linkGroup.name = "eefFrame";
+		linkGroupList.push(linkGroup);
+
+		linkGroup = new Group();
+		linkGroup.name = "eef";
+		// var axesHelper = new AxesHelper(0.2);
+		// axesHelper.matrixAutoUpdate = false;
+		// axesHelper.visible = _eef_frame_visible;
+		// linkGroup.add(axesHelper);
+		linkGroup.applyMatrix4(_htm_n_eef)
+		linkGroup.updateMatrix();
+		linkGroupList.push(linkGroup);
+
+
+		base.add(baseFrame)
+		baseFrame.add(linkGroupList[0])
+
+		for (let i = 0; i < linkGroupList.length - 1; i++) {
+			linkGroupList[i].add(linkGroupList[i + 1])
+		}
+
+		//Load 3D models
+
+		this.shape = base;
+		this.shape.matrixAutoUpdate = false;
+
+		this.loadObj(_objBase, "base", "base", false)
+		for (let i = 0; i < this.links.length - 1; i++) {
+			this.loadObj(this.links[i].model3d, "link" + (i + 1).toString(), "link" + (i).toString(), this.links[i].showFrame)
+		}
+		this.loadObj(this.links[this.links.length - 1].model3d, "link" + (this.links.length).toString(), "link" + (this.links.length).toString(), false)
+
+		this.delta_config = []
+
+		for (let i = 0; i < this.links.length; i++) {
+			if (this.links[i].jointType == 0) {
+				this.delta_config.push(this.shape.getObjectByName("link" + (i).toString()).rotation.z)
+			}
+			if (this.links[i].jointType == 1) {
+				this.delta_config.push(this.shape.getObjectByName("link" + (i).toString()).position.z)
+
+			}
+		}
+
+	}
+
+	loadObj(obj, name1, name2, axisVisible) {
+
+		const manager = new LoadingManager();
+		const objLoader = new OBJLoader(manager);
+		const stlLoader = new STLLoader(manager);
+		const colladaLoader = new ColladaLoader(manager);
+
+		for (let i = 0; i < obj.length; i++) {
+
+
+			if (obj[i].type == "obj") {
+				objLoader.load(obj[i].url, (root) => {
+					root.scale.set(obj[i].scale, obj[i].scale, obj[i].scale);
+					root.applyMatrix4(obj[i].matrix)
+
+					root.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = obj[i].mesh_material;
+						}
+					});
+
+					this.shape.getObjectByName(name2).add(root);
+					this.loadedObjs += 1
+				});
+			}
+			if (obj[i].type == "stl") {
+				stlLoader.load(obj[i].url, (root) => {
+					const mesh = new Mesh(root);
+					mesh.scale.set(obj[i].scale, obj[i].scale, obj[i].scale);
+					mesh.applyMatrix4(obj[i].matrix)
+
+					mesh.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = obj[i].mesh_material;
+						}
+					});
+
+					this.shape.getObjectByName(name2).add(mesh);
+					this.loadedObjs += 1
+				});
+			}
+			if (obj[i].type == "dae") {
+				colladaLoader.load(obj[i].url, (root) => {
+					const group = root.scene;
+					group.scale.set(obj[i].scale, obj[i].scale, obj[i].scale);
+					group.applyMatrix4(obj[i].matrix)
+
+					group.traverse(function (child) {
+						if (child instanceof Mesh) {
+							child.material = obj[i].mesh_material;
+						}
+					});
+
+					this.shape.getObjectByName(name2).add(group);
+					this.loadedObjs += 1
+				});
+			}
+
+		}
+
+		// this.shape.getObjectByName(name1).getObjectByProperty("type", "AxesHelper").visible = axisVisible;
+	}
+
+	hasLoaded() {
+		return this.loadedObjs == this.totalNumberOfObjects;
+	}
+
+	//Function that updates frames
+	showFrame() {
+		//setting robot position
+		this.shape.matrix.set(this.frames[this.currentFrame][1], this.frames[this.currentFrame][2], this.frames[this.currentFrame][3], this.frames[this.currentFrame][4],
+			this.frames[this.currentFrame][5], this.frames[this.currentFrame][6], this.frames[this.currentFrame][7], this.frames[this.currentFrame][8],
+			this.frames[this.currentFrame][9], this.frames[this.currentFrame][10], this.frames[this.currentFrame][11], this.frames[this.currentFrame][12],
+			this.frames[this.currentFrame][13], this.frames[this.currentFrame][14], this.frames[this.currentFrame][15], this.frames[this.currentFrame][16]);
+		//setting robot configuration
+
+		if (this.frames[this.currentFrame][17] != undefined) {
+
+			for (let i = 0; i < this.links.length; i++) {
+				const linkName = "linkFrame" + (i).toString();
+
+				if (this.links[i].jointType == 0) {
+					this.shape.getObjectByName(linkName).rotation.z = this.frames[this.currentFrame][17][i] + this.delta_config[i];
+				} else if (this.links[i].jointType == 1) {
+					this.shape.getObjectByName(linkName).position.z = this.frames[this.currentFrame][17][i] + this.delta_config[i];
+				}
+
+			}
+		}
+	}
+
+	setEnvMapTemp(variable, envMap) {
+		if (variable instanceof Mesh) {
+			variable.material.envMap = envMap;
+			variable.material.needsUpdate = true;
+		}
+		else if (variable instanceof Group) {
+			for (let i = 0; i < variable.children.length; i++) {
+				this.setEnvMapTemp(variable.children[i]);
+			}
+		}
+	}
+	setEnvMap(envMap) {
+		this.setEnvMapTemp(this.shape, envMap);
+	}
+}
+
+//------------------------------------------------------------
+
+//--------------- BASIC ELEMENTS OF ANY SCENE ----------------
+
+Object3D.DefaultUp = new Vector3(0, 0, 1); //Pointing Z axis up
+const canvas = document.getElementById('scene_' + sceneID);// Selecting canvas
+
+const scene = new Scene();//Instantiate the Scene
+scene.background = new Color(backgroundColor);//Set background color
+
+let camera;
+
+if (cameraType == "perspective") {
+	camera = new PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 100);//Instantiate a camera
+}
+if (cameraType == "orthographic") {
+	camera = new OrthographicCamera(-3.2, 3.2, 2.4, -2.4, 0.01, 100);
+}
+
+
+
+var ambientLight = new HemisphereLight('white', 'darkslategrey', 3);//Instantiate Ambient light
+ambientLight.intensity = ambientLightIntensity;
+scene.add(ambientLight);
+
+const controls = new OrbitControls(camera, canvas);	//Instantiate orbit controls
+//controls.target.set(0, 0, 0);//Point camera at the origin
+
+camera.position.set(cameraStartPose[0], cameraStartPose[1], cameraStartPose[2]);
+//camera.rotation.set(cameraStartPose[3], cameraStartPose[4], cameraStartPose[5]);
+camera.lookAt(cameraStartPose[3], cameraStartPose[4], cameraStartPose[5]);
+camera.zoom = cameraStartPose[6];
+camera.updateProjectionMatrix();
+
+const renderer = new WebGLRenderer({ canvas, antialias: true });//Instantiate renderer
+renderer.physicallyCorrectLights = true;//Enable physically Correct Lights
+renderer.setSize(canvas.clientWidth, canvas.clientHeight);//Set render size
+renderer.setPixelRatio(window.devicePixelRatio);//Set pixel ratio
+
+let sceneElements = [];
+
+// if (showWorldFrame) {
+// 	const axesHelper = new AxesHelper(0.5);
+// 	axesHelper.renderOrder = 1;
+// 	scene.add(axesHelper);
+// }
+
+if (showGrid) {
+	const gridHelper = new GridHelper(6, 12);
+	scene.add(gridHelper);
+	gridHelper.rotation.x = 3.14 / 2;
+}
+
+
+
+
+
+//------------------------------------------------------------
+
+//--------------- ADDING ELEMENTS TO THIS SCENE ---------------
+
+//BEGIN DECLARATION OF THE GROUP 'var_group_id_139963661414736'
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963659995600'
+
+const material_var_cylinder_id_139963659995600 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "red",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963659995600 = new Cylinder(0.004,0.5,[[0, 0.0, 1.0, -0.0, 0.25, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -0.0, 0.0, 0, 0, 0, 1]], material_var_cylinder_id_139963659995600);
+sceneElements.push(var_var_cylinder_id_139963659995600);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963660199184'
+
+const material_var_cylinder_id_139963660199184 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "lime",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963660199184 = new Cylinder(0.004,0.5,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 1.0, -0.0, 0.25, 0.0, 0.0, 1.0, 0.0, 0, 0, 0, 1]], material_var_cylinder_id_139963660199184);
+sceneElements.push(var_var_cylinder_id_139963660199184);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963660191504'
+
+const material_var_cylinder_id_139963660191504 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "blue",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963660191504 = new Cylinder(0.004,0.5,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, 0.25, 0, 0, 0, 1]], material_var_cylinder_id_139963660191504);
+sceneElements.push(var_var_cylinder_id_139963660191504);
+
+
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752475408'
+
+const material_var_box_id_140487752475408 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752475408 = new Box(1.0364385540096241,0.2740375544260289,1.4160827443491133,[[0, 1.0, 0.0, -0.0, 0.8051, 0.0, 0.0, -1.0, -0.2006, 0.0, 1.0, -0.0, 0.117, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.8051, 0.0, 0.0, -1.0, -0.2006, 0.0, 1.0, -0.0, 0.917, 0, 0, 0, 1]], material_var_box_id_140487752475408);
+sceneElements.push(var_var_box_id_140487752475408);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752351248'
+
+const material_var_box_id_140487752351248 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752351248 = new Box(0.10099400372110405,0.2740375544260289,0.5899535477987317,[[0, 1.0, 0.0, -0.0, 0.2364, 0.0, 0.0, -1.0, -0.6137, 0.0, 1.0, -0.0, 0.117, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.2364, 0.0, 0.0, -1.0, -0.6137, 0.0, 1.0, -0.0, 0.917, 0, 0, 0, 1]], material_var_box_id_140487752351248);
+sceneElements.push(var_var_box_id_140487752351248);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487799195472'
+
+const material_var_box_id_140487799195472 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487799195472 = new Box(0.11607096164246264,0.3345524893955715,0.07826117794422083,[[0, 0.8423, 0.0, 0.5391, 0.3764, 0.5391, 0.0, -0.8423, -0.3521, 0.0, 1.0, -0.0, 0.4213, 0, 0, 0, 1], [0, 0.8423, 0.0, 0.5391, 0.3764, 0.5391, 0.0, -0.8423, -0.3521, 0.0, 1.0, -0.0, 1.2213, 0, 0, 0, 1]], material_var_box_id_140487799195472);
+sceneElements.push(var_var_box_id_140487799195472);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752205776'
+
+const material_var_box_id_140487752205776 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752205776 = new Box(1.0364385540096241,0.2740375544260289,1.0900931147780697,[[0, 1.0, 0.0, -0.0, 0.8051, 0.0, 0.0, -1.0, 1.0524, 0.0, 1.0, -0.0, 0.117, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.8051, 0.0, 0.0, -1.0, 1.0524, 0.0, 1.0, -0.0, 0.917, 0, 0, 0, 1]], material_var_box_id_140487752205776);
+sceneElements.push(var_var_box_id_140487752205776);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752470288'
+
+const material_var_box_id_140487752470288 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752470288 = new Box(0.0722274015298655,0.2740375544260289,0.5899535477987317,[[0, 1.0, 0.0, -0.0, 0.1498, 0.0, 0.0, -1.0, -0.6137, 0.0, 1.0, -0.0, 0.117, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.1498, 0.0, 0.0, -1.0, -0.6137, 0.0, 1.0, -0.0, 0.917, 0, 0, 0, 1]], material_var_box_id_140487752470288);
+sceneElements.push(var_var_box_id_140487752470288);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752208208'
+
+const material_var_box_id_140487752208208 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752208208 = new Box(0.5350582683437233,0.02,0.6540838062271919,[[0, 1.0, 0.0, -0.0, 0.0193, 0.0, 0.0, -1.0, 0.0083, 0.0, 1.0, -0.0, -0.01, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.0193, 0.0, 0.0, -1.0, 0.0083, 0.0, 1.0, -0.0, 0.79, 0, 0, 0, 1]], material_var_box_id_140487752208208);
+sceneElements.push(var_var_box_id_140487752208208);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752469264'
+
+const material_var_box_id_140487752469264 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752469264 = new Box(0.12147520102692094,0.2106495819051329,0.09799476151576281,[[0, 0.3486, 0.0, 0.9373, 0.5245, 0.9373, 0.0, -0.3486, -0.2148, 0.0, 1.0, -0.0, 0.3594, 0, 0, 0, 1], [0, 0.3486, 0.0, 0.9373, 0.5245, 0.9373, 0.0, -0.3486, -0.2148, 0.0, 1.0, -0.0, 1.1594, 0, 0, 0, 1]], material_var_box_id_140487752469264);
+sceneElements.push(var_var_box_id_140487752469264);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752470480'
+
+const material_var_box_id_140487752470480 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752470480 = new Box(0.08815465637412302,0.17782957776601888,0.08990899994981441,[[0, 0.7987, 0.0, 0.6018, 1.165, 0.6018, 0.0, -0.7987, 0.4926, 0.0, 1.0, -0.0, 0.343, 0, 0, 0, 1], [0, 0.7987, 0.0, 0.6018, 1.165, 0.6018, 0.0, -0.7987, 0.4926, 0.0, 1.0, -0.0, 1.143, 0, 0, 0, 1]], material_var_box_id_140487752470480);
+sceneElements.push(var_var_box_id_140487752470480);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752471056'
+
+const material_var_box_id_140487752471056 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752471056 = new Box(0.12328652701257498,0.2709046966605283,0.1246469474053855,[[0, 0.0365, 0.0, 0.9993, 0.6547, 0.9993, 0.0, -0.0365, 0.2405, 0.0, 1.0, -0.0, 0.3895, 0, 0, 0, 1], [0, 0.0365, 0.0, 0.9993, 0.6547, 0.9993, 0.0, -0.0365, 0.2405, 0.0, 1.0, -0.0, 1.1895, 0, 0, 0, 1]], material_var_box_id_140487752471056);
+sceneElements.push(var_var_box_id_140487752471056);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752210192'
+
+const material_var_box_id_140487752210192 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752210192 = new Box(0.06229274754618133,0.1405915635118608,0.10434384440027197,[[0, 0.4895, 0.0, 0.872, 0.6332, 0.872, 0.0, -0.4895, 0.4083, 0.0, 1.0, -0.0, 0.3243, 0, 0, 0, 1], [0, 0.4895, 0.0, 0.872, 0.6332, 0.872, 0.0, -0.4895, 0.4083, 0.0, 1.0, -0.0, 1.1243, 0, 0, 0, 1]], material_var_box_id_140487752210192);
+sceneElements.push(var_var_box_id_140487752210192);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487752336912'
+
+const material_var_box_id_140487752336912 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487752336912 = new Box(0.10966847010211275,0.3100905813685514,0.13087088011341125,[[0, 0.1729, 0.0, 0.9849, 0.9244, 0.9849, 0.0, -0.1729, 0.3962, 0.0, 1.0, -0.0, 0.4091, 0, 0, 0, 1], [0, 0.1729, 0.0, 0.9849, 0.9244, 0.9849, 0.0, -0.1729, 0.3962, 0.0, 1.0, -0.0, 1.2091, 0, 0, 0, 1]], material_var_box_id_140487752336912);
+sceneElements.push(var_var_box_id_140487752336912);
+
+//BEGIN DECLARATION OF THE BOX 'var_box_id_140487751751568'
+
+const material_var_box_id_140487751751568 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_box_id_140487751751568 = new Box(0.3,0.8,0.25,[[0, 1.0, 0.0, -0.0, -0.05, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, -0.4, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, -0.05, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, 0.4, 0, 0, 0, 1]], material_var_box_id_140487751751568);
+sceneElements.push(var_var_box_id_140487751751568);
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_140487752472400'
+
+const material_var_cylinder_id_140487752472400 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_140487752472400 = new Cylinder(0.07772214426547655,0.26766992885650676,[[0, 1.0, 0.0, -0.0, 0.632, 0.0, 0.0, -1.0, -0.4618, 0.0, 1.0, -0.0, 0.3879, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.632, 0.0, 0.0, -1.0, -0.4618, 0.0, 1.0, -0.0, 1.1879, 0, 0, 0, 1]], material_var_cylinder_id_140487752472400);
+sceneElements.push(var_var_cylinder_id_140487752472400);
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_140487752212688'
+
+const material_var_cylinder_id_140487752212688 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_140487752212688 = new Cylinder(0.12423979371393895,0.24305711164226645,[[0, 1.0, 0.0, -0.0, 0.8961, 0.0, 0.0, -1.0, -0.7924, 0.0, 1.0, -0.0, 0.3756, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.8961, 0.0, 0.0, -1.0, -0.7924, 0.0, 1.0, -0.0, 1.1756, 0, 0, 0, 1]], material_var_cylinder_id_140487752212688);
+sceneElements.push(var_var_cylinder_id_140487752212688);
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_140487751753680'
+
+const material_var_cylinder_id_140487751753680 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_140487751753680 = new Cylinder(0.13307816760444474,0.10279269027227433,[[0, 1.0, 0.0, -0.0, 1.3132, 0.0, 0.0, -1.0, -0.9007, 0.0, 1.0, -0.0, 0.3054, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 1.3132, 0.0, 0.0, -1.0, -0.9007, 0.0, 1.0, -0.0, 1.1054, 0, 0, 0, 1]], material_var_cylinder_id_140487751753680);
+sceneElements.push(var_var_cylinder_id_140487751753680);
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_140487752467344'
+
+const material_var_cylinder_id_140487752467344 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "magenta",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_140487752467344 = new Cylinder(0.05387443963668142,0.18205759543523703,[[0, 1.0, 0.0, -0.0, 0.2037, 0.0, 0.0, -1.0, -0.9063, 0.0, 1.0, -0.0, 0.3451, 0, 0, 0, 1], [0, 1.0, 0.0, -0.0, 0.2037, 0.0, 0.0, -1.0, -0.9063, 0.0, 1.0, -0.0, 1.1451, 0, 0, 0, 1]], material_var_cylinder_id_140487752467344);
+sceneElements.push(var_var_cylinder_id_140487752467344);
+
+//BEGIN DECLARATION OF THE ROBOT 'var_robot_id_139963660066384'
+
+const object3d_base_var_robot_id_139963660066384_list = [];
+
+const material_var_robot_id_139963660066384_obj_base_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_var_robot_id_139963660066384_obj_base_0 = new Matrix4(); 
+htm_var_robot_id_139963660066384_obj_base_0.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+const object3d_var_robot_id_139963660066384_obj_base_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link0.obj',
+scale: 1,
+matrix: htm_var_robot_id_139963660066384_obj_base_0,
+type: 'obj',
+mesh_material: material_var_robot_id_139963660066384_obj_base_0};
+
+object3d_base_var_robot_id_139963660066384_list.push(object3d_var_robot_id_139963660066384_obj_base_0);
+
+const list_links_var_robot_id_139963660066384 = [];
+
+const object3d_link_0_var_robot_id_139963660066384_list = [];
+
+const material_link_0_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_0_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_0_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,0.0,0.0,0.0008,-1.0,0.0,0.0,1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_0_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link1.obj',
+scale: 1,
+matrix: htm_link_0_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_0_var_robot_id_139963660066384_obj_0};
+
+object3d_link_0_var_robot_id_139963660066384_list.push(object3d_link_0_var_robot_id_139963660066384_obj_0);
+
+const link_0_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.333, 
+a: 0.0, 
+alpha: -1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_0_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_0_var_robot_id_139963660066384);
+
+const object3d_link_1_var_robot_id_139963660066384_list = [];
+
+const material_link_1_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_1_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_1_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,0.0,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_1_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link2.obj',
+scale: 1,
+matrix: htm_link_1_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_1_var_robot_id_139963660066384_obj_0};
+
+object3d_link_1_var_robot_id_139963660066384_list.push(object3d_link_1_var_robot_id_139963660066384_obj_0);
+
+const link_1_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.0, 
+a: 0.0, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_1_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_1_var_robot_id_139963660066384);
+
+const object3d_link_2_var_robot_id_139963660066384_list = [];
+
+const material_link_2_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_2_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_2_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,-0.0825,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_2_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link3.obj',
+scale: 1,
+matrix: htm_link_2_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_2_var_robot_id_139963660066384_obj_0};
+
+object3d_link_2_var_robot_id_139963660066384_list.push(object3d_link_2_var_robot_id_139963660066384_obj_0);
+
+const link_2_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.316, 
+a: 0.0825, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_2_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_2_var_robot_id_139963660066384);
+
+const object3d_link_3_var_robot_id_139963660066384_list = [];
+
+const material_link_3_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_3_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_3_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,0.0825,0.0,0.0008,-1.0,0.0,0.0,1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_3_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link4.obj',
+scale: 1,
+matrix: htm_link_3_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_3_var_robot_id_139963660066384_obj_0};
+
+object3d_link_3_var_robot_id_139963660066384_list.push(object3d_link_3_var_robot_id_139963660066384_obj_0);
+
+const link_3_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.0, 
+a: -0.0825, 
+alpha: -1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_3_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_3_var_robot_id_139963660066384);
+
+const object3d_link_4_var_robot_id_139963660066384_list = [];
+
+const material_link_4_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_4_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_4_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,0.0,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_4_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link5.obj',
+scale: 1,
+matrix: htm_link_4_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_4_var_robot_id_139963660066384_obj_0};
+
+object3d_link_4_var_robot_id_139963660066384_list.push(object3d_link_4_var_robot_id_139963660066384_obj_0);
+
+const link_4_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.384, 
+a: 0.0, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_4_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_4_var_robot_id_139963660066384);
+
+const object3d_link_5_var_robot_id_139963660066384_list = [];
+
+const material_link_5_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_5_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_5_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,-0.088,0.0,0.0008,1.0,0.0,0.0,-1.0,0.0008,0.0,0.0,0.0,0.0,1.0);
+const object3d_link_5_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link6.obj',
+scale: 1,
+matrix: htm_link_5_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_5_var_robot_id_139963660066384_obj_0};
+
+object3d_link_5_var_robot_id_139963660066384_list.push(object3d_link_5_var_robot_id_139963660066384_obj_0);
+
+const link_5_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.0, 
+a: 0.088, 
+alpha: 1.5708, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_5_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_5_var_robot_id_139963660066384);
+
+const object3d_link_6_var_robot_id_139963660066384_list = [];
+
+const material_link_6_var_robot_id_139963660066384_obj_0 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_6_var_robot_id_139963660066384_obj_0 = new Matrix4(); 
+htm_link_6_var_robot_id_139963660066384_obj_0.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,-0.177,0.0,0.0,0.0,1.0);
+const object3d_link_6_var_robot_id_139963660066384_obj_0={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/link7.obj',
+scale: 1,
+matrix: htm_link_6_var_robot_id_139963660066384_obj_0,
+type: 'obj',
+mesh_material: material_link_6_var_robot_id_139963660066384_obj_0};
+
+object3d_link_6_var_robot_id_139963660066384_list.push(object3d_link_6_var_robot_id_139963660066384_obj_0);
+const material_link_6_var_robot_id_139963660066384_obj_1 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "silver",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0.3,
+normalScale: new Vector2(0.5,0.5),
+refractionRatio: 0.98,
+roughness: 0.5,
+clearcoat: 1,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+const htm_link_6_var_robot_id_139963660066384_obj_1 = new Matrix4(); 
+htm_link_6_var_robot_id_139963660066384_obj_1.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,-0.06699999999999999,0.0,0.0,0.0,1.0);
+const object3d_link_6_var_robot_id_139963660066384_obj_1={
+url: 'https://raw.githubusercontent.com/viniciusmgn/uaibot_content/master/contents/FrankaErmika/hand.obj',
+scale: 1,
+matrix: htm_link_6_var_robot_id_139963660066384_obj_1,
+type: 'obj',
+mesh_material: material_link_6_var_robot_id_139963660066384_obj_1};
+
+object3d_link_6_var_robot_id_139963660066384_list.push(object3d_link_6_var_robot_id_139963660066384_obj_1);
+
+const link_6_var_robot_id_139963660066384 = {
+theta: 0.0, 
+d: 0.177, 
+a: 0.0, 
+alpha: 0.0, 
+jointType: 0, 
+showFrame: false,
+model3d: object3d_link_6_var_robot_id_139963660066384_list}; 
+ 
+list_links_var_robot_id_139963660066384.push(link_6_var_robot_id_139963660066384);
+
+const htm_var_robot_id_139963660066384_base_0 = new Matrix4(); 
+htm_var_robot_id_139963660066384_base_0.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+const htm_var_robot_id_139963660066384_n_eef = new Matrix4(); 
+htm_var_robot_id_139963660066384_n_eef.set(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+const var_var_robot_id_139963660066384 = new Robot(object3d_base_var_robot_id_139963660066384_list, list_links_var_robot_id_139963660066384,[[0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [0.0, 0.0, 0.0, -0.06981317007977318, 0.0, 0.0, 0.0]], [0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7791526889661344, 0.9485033045625952, 1.890092708361417, -2.4176032371494487, -1.2647836055662884, 1.9876393699056345, -2.443835746121535]], [0.01, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7753306226721157, 0.9482756573211477, 1.8913785954234512, -2.413924990557008, -1.2579914706962243, 1.9844820338360707, -2.443786597528194]], [0.02, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.771528154354322, 0.9480520174892687, 1.892620015632872, -2.4102594635294143, -1.2512616450997245, 1.9813528548427182, -2.443725973661245]], [0.03, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7677450427536212, 0.9478328864218891, 1.893817649935177, -2.406607166888674, -1.2445932652245828, 1.978251606305097, -2.443654231059974]], [0.04, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7639811532420466, 0.9476184992548837, 1.8949721564390194, -2.402968631266713, -1.2379853491050332, 1.9751783336876712, -2.443571782237656]], [0.05, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7602363820098141, 0.9474089734920433, 1.896084198170602, -2.399344359468638, -1.2314368187879652, 1.972133145334908, -2.4434790940545854]], [0.060000000000000005, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.756510362344431, 0.9472049964759433, 1.897154391963013, -2.3957347969948914, -1.2249470040072918, 1.969115653945825, -2.4433764770102586]], [0.06999999999999999, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.752803031327357, 0.947006478587813, 1.8981833599456865, -2.392140418214848, -1.2185147356212895, 1.9661261423379932, -2.4432644432434456]], [0.08, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7491141025481547, 0.9468138388390903, 1.899171695553167, -2.388561642124116, -1.2121391892736542, 1.9631644371805077, -2.4431433909817852]], [0.09, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.745443318967806, 0.9466274033263632, 1.9001199785987866, -2.3849988842530676, -1.205819506458742, 1.9602304548373861, -2.4430137348816388]], [0.09999999999999999, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7417904787242402, 0.946447298645454, 1.9010287739509377, -2.3814525357985867, -1.199554694205925, 1.957324252232732, -2.4428759607284536]], [0.11, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7381552769406685, 0.9462738518079126, 1.9018986205354058, -2.3779229679042913, -1.1933439212308408, 1.9544457206020336, -2.4427304920330837]], [0.12, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7345373633771448, 0.9461074377656978, 1.9027300368161932, -2.374410510927275, -1.1871864022646244, 1.9515946944795621, -2.442577748551181]], [0.13, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.730936441495658, 0.9459482871052585, 1.9035235372984847, -2.3709154916274513, -1.1810812617870645, 1.9487711222124464, -2.4424181881097486]], [0.14, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7273521961887457, 0.9457966168496055, 1.9042796070280184, -2.3674382168756876, -1.1750276284728072, 1.9459749482357367, -2.4422522933699913]], [0.15000000000000002, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.723784190576173, 0.945652863280446, 1.9049987133868813, -2.363978946760517, -1.1690247971343282, 1.943205920082576, -2.442080469050063]], [0.16, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7202321148537916, 0.9455171520095077, 1.9056813111732926, -2.3605379526298687, -1.163071865634837, 1.940464048783253, -2.441903227711551]], [0.17, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7166956784689014, 0.9453894996831259, 1.9063278376688655, -2.3571154813317716, -1.1571678623456132, 1.937749422093338, -2.441721124160002]], [0.18000000000000002, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7131743370021408, 0.9452704355015982, 1.9069386976892215, -2.3537117150487643, -1.151312178922699, 1.9350616547033932, -2.4415345569671203]], [0.19, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.709667754121211, 0.945159964550147, 1.9075142913839807, -2.350326846498056, -1.1455038569341789, 1.932400813466565, -2.4413440856609614]], [0.2, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.7061754395257072, 0.9450584338371398, 1.908054986588579, -2.3469610437818638, -1.1397421960873177, 1.9297666703331218, -2.4411501787748753]], [0.21000000000000002, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.70269687207703, 0.9449661622556144, 1.908561144706921, -2.343614418849082, -1.1340264668539708, 1.9271589758161087, -2.4409533167823447]], [0.22, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6992315533884275, 0.9448833633011647, 1.909033098657409, -2.340287076426066, -1.128355890446504, 1.9245775660410225, -2.4407540103748486]], [0.23, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6957790476274606, 0.944810051095852, 1.9094711623599967, -2.336979112113246, -1.122729557488783, 1.9220224359686144, -2.440552836222493]], [0.24000000000000002, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.692338792896913, 0.9447464543803034, 1.9098756205830858, -2.3336905646401442, -1.1171467066069614, 1.9194933675574413, -2.4403503292725444]], [0.25, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6889101354273062, 0.9446929712181898, 1.9102467481043628, -2.3304214421059584, -1.1116067114559387, 1.9169899787896787, -2.44014694243667]], [0.26, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6854925328864685, 0.9446496234243804, 1.910584788331277, -2.327171730000669, -1.106108675069265, 1.914512173866518, -2.4399432839160666]], [0.27, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6820854585311469, 0.9446164157791456, 1.9108899753840014, -2.32394141078497, -1.1006516996127058, 1.9120598668277022, -2.439739966858297]], [0.28, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6786881785165908, 0.9445937297192513, 1.9111625138717452, -2.3207303968925306, -1.095235167493407, 1.9096326299198034, -2.4395374721428777]], [0.29000000000000004, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6753000213361509, 0.9445816355026556, 1.9114025696819859, -2.3175385635326093, -1.0898582325386807, 1.9072302421296348, -2.4393363858975006]], [0.3, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.671920314058887, 0.9445802381362062, 1.9116102992866613, -2.314365779124028, -1.0845200844813765, 1.9048524590793887, -2.4391372945713745]], [0.31, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6685483242959587, 0.9445896779690294, 1.9117858328023953, -2.3112118610043098, -1.0792199286960096, 1.9024989552040905, -2.438940780171834]], [0.32, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6651832213548474, 0.9446101612487503, 1.9119292711583462, -2.3080765593720862, -1.0739570254744728, 1.9001693080183297, -2.438747385792988]], [0.33, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6618242895856754, 0.9446416339370686, 1.9120406933493124, -2.304959630840773, -1.068730438323742, 1.8978632963713487, -2.4385577828215]], [0.34, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6584706019844686, 0.9446843941846056, 1.9121201400409011, -2.3018607543123406, -1.063539499814083, 1.895580365929915, -2.438372481638063]], [0.35000000000000003, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6551213786842187, 0.9447383012004386, 1.9121676252441262, -2.298779588488799, -1.058383200330293, 1.89332027645021, -2.4381921821627146]], [0.36000000000000004, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6517756599045315, 0.9448035253322012, 1.9121831410906749, -2.295715720402591, -1.0532607630799895, 1.8910824910388893, -2.438017444388501]], [0.37, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6484325475914847, 0.9448800281543258, 1.912166640943465, -2.2926687196414974, -1.0481712507586398, 1.8888666098871425, -2.4378489264271392]], [0.38, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6450910302921684, 0.9449678675247166, 1.9121180518616292, -2.2896380703489925, -1.0431137805266455, 1.8866720869748959, -2.437687245076095]], [0.39, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6417500554379778, 0.9450671253206202, 1.9120372515739736, -2.286623220200692, -1.038087485207519, 1.8844983206327774, -2.4375330127957477]], [0.4, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6384086449667092, 0.9451776084707224, 1.911924110185811, -2.283623573269625, -1.0330912741815648, 1.8823448721613736, -2.4373869423257144]], [0.41000000000000003, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6350656175721872, 0.9452994117251662, 1.9117784416709172, -2.28063843273717, -1.0281242485530613, 1.8802109957238793, -2.4372496354693687]], [0.42000000000000004, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6317198086161941, 0.9454324917143085, 1.9116000241375974, -2.27766706301328, -1.0231853930107442, 1.8780960030742881, -2.4371217603330915]], [0.43, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6283700246771418, 0.9455767031054187, 1.911388586669905, -2.27470866332681, -1.0182736070259848, 1.875999225659512, -2.4370039932171697]], [0.44, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6250149664333768, 0.9457320685900279, 1.9111438422488485, -2.271762349619015, -1.0133878755281114, 1.8739197888775438, -2.4368969839080443]], [0.45, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6216533523168584, 0.945898396171926, 1.910865445885635, -2.2688271729639067, -1.0085269905751089, 1.8718568879098327, -2.4368014440568193]], [0.46, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.618283774947415, 0.9460756058943159, 1.9105530062992822, -2.2659020914544663, -1.0036898027769032, 1.8698095627750178, -2.436718054496196]], [0.47000000000000003, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6149047890668238, 0.9462635730641232, 1.9102060806039032, -2.262985992904765, -0.9988750981390199, 1.8677767990570813, -2.4366475060344004]], [0.48000000000000004, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6115148691093486, 0.9464621352547978, 1.9098241764164985, -2.2600776506128506, -0.9940815748961123, 1.8657574932694552, -2.4365905236234817]], [0.49, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6081125087636838, 0.9466709753350229, 1.9094067627928344, -2.2571757689111904, -0.9893077703921, 1.8637505678359665, -2.4365478978462263]], [0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.604695989109343, 0.9468899983899564, 1.9089532389489405, -2.254278907492989, -0.9845523309564521, 1.8617546328776813, -2.4365203286813526]], [0.51, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.6012636040841155, 0.9471189459868146, 1.9084629431225162, -2.251385556251522, -0.9798137312210794, 1.8597683395837499, -2.4365086067057833]], [0.52, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5978135747994247, 0.9473574369887087, 1.907935153471459, -2.248494051824863, -0.9750902515531825, 1.8577902305430238, -2.436513580895179]], [0.53, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5943439608749141, 0.94760529142967, 1.9073690913403754, -2.245602606843507, -0.9703802674055058, 1.855818592551756, -2.4365360485886765]], [0.54, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.590852729707757, 0.9478622496189937, 1.9067638825124353, -2.2427092988562682, -0.9656820036632247, 1.8538515912469498, -2.4365768396829495]], [0.55, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5873377927478514, 0.9481279052607453, 1.9061185876436508, -2.2398120395532017, -0.9609934570910177, 1.8518873156690325, -2.436636889984306]], [0.56, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5837969204656568, 0.9484019232587071, 1.9054321866512112, -2.2369085801401742, -0.9563125542209412, 1.8499235810048564, -2.4367171529330562]], [0.5700000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5802277921093004, 0.9486838540040673, 1.9047035703636788, -2.2339964910826935, -0.9516370090603821, 1.8479580831938465, -2.436818649839706]], [0.5800000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5766278483964131, 0.9489734267620934, 1.9039315320309274, -2.231073118083935, -0.946964517985689, 1.845988110372427, -2.4369423848498]], [0.59, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5729944852393596, 0.9492701102100641, 1.9031147432907878, -2.228135613493147, -0.9422924083921093, 1.8440109040268353, -2.4370895589415276]], [0.6, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5693248895594425, 0.9495734028946, 1.9022517713189169, -2.225180851183362, -0.9376178093552054, 1.8420233027147448, -2.437261396517264]], [0.61, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5656160900886151, 0.949882758590553, 1.9013410587176758, -2.2222054617357077, -0.9329376069266236, 1.8400218804146953, -2.4374592614024424]], [0.62, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.561864771862037, 0.9501978307528954, 1.9003808722569295, -2.219205740218936, -0.92824858732631, 1.8380026555068034, -2.437684516738627]], [0.63, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5580675829966273, 0.9505178351952518, 1.8993693533699227, -2.2161776648300338, -0.9235468748562485, 1.8359615045654143, -2.437938845468413]], [0.64, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5542207111425799, 0.9508423571468246, 1.8983044662003554, -2.2131167800643894, -0.9188285503643997, 1.8338935138473107, -2.438223890112783]], [0.65, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5503201294053603, 0.9511707727568217, 1.8971839419828485, -2.2100182551858047, -0.9140891581956151, 1.8317933977491054, -2.4385415453812023]], [0.66, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5463614913480237, 0.9515023697801375, 1.8960053197401723, -2.206876744489277, -0.9093237004293042, 1.8296552501097523, -2.4388939410779895]], [0.67, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5423400156638463, 0.9518364633053203, 1.8947658584208893, -2.203686345523859, -0.9045267042260483, 1.8274724228049464, -2.43928337402747]], [0.68, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5382505150000778, 0.9521723946342131, 1.89346254845113, -2.200440598939036, -0.8996921578731581, 1.8252374802430005, -2.4397123404945216]], [0.6900000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5340873193589166, 0.9525093804001555, 1.8920920915726382, -2.197132279575134, -0.8948132382438201, 1.8229420621416386, -2.4401836444857454]], [0.7000000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.529844292268328, 0.9528465886498623, 1.890650818051692, -2.1937535058158253, -0.8898824167955985, 1.820576963912075, -2.4407003155992206]], [0.7100000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5255146875300984, 0.953183302641877, 1.8891347089854018, -2.1902955705477822, -0.8848914362391543, 1.8181317931441818, -2.4412655571659228]], [0.72, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5210913161277084, 0.9535187506756735, 1.887539354457149, -2.18674908427231, -0.8798312605662083, 1.8155953036907335, -2.4418826800079767]], [0.73, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.516576433905905, 0.9538537574664184, 1.885863570891016, -2.1831125517128442, -0.8747020182285106, 1.812967563655266, -2.442546350545022]], [0.74, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5120793501112433, 0.9542060588136442, 1.8841459834654761, -2.1794810113678014, -0.8696122996318173, 1.8103840190409535, -2.443158840506985]], [0.75, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5076050504676894, 0.9545774838472021, 1.8823912658220587, -2.1758623881678063, -0.8645666208825478, 1.8078517565328291, -2.4437173698313033]], [0.76, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.5031596729829348, 0.9549697270752003, 1.8806047816270604, -2.172266155318106, -0.8595709770490787, 1.8053803023952046, -2.4442180203091906]], [0.77, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4987501736058197, 0.9553862521751175, 1.878793020744003, -2.1687040256062633, -0.8546350880405893, 1.8029813660410694, -2.444654218239037]], [0.78, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4943859751778377, 0.9558279649249101, 1.8769630328709754, -2.1651897360843226, -0.8497685592312649, 1.8006712504678366, -2.44501975003281]], [0.79, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4900773861730778, 0.9562981710680747, 1.8751232792013923, -2.1617397258652407, -0.8449858462965826, 1.7984687491606375, -2.445305234222304]], [0.8, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4858365965745617, 0.9567993959149097, 1.873283118883267, -2.158372761235286, -0.8403032545560079, 1.7963965872268288, -2.4455005312852776]], [0.81, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4816776168180612, 0.9573326106175244, 1.8714524470533236, -2.155109481350644, -0.8357380281847053, 1.7944812984931138, -2.445595648570635]], [0.8200000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.477614655240439, 0.9579015961659503, 1.8696424088927328, -2.151972496953173, -0.8313123322923561, 1.792750730200637, -2.445577829505896]], [0.8300000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4736629346154038, 0.9585067520458976, 1.8678635303204651, -2.1489842161982686, -0.8270460909551758, 1.7912347931686792, -2.4454369204490387]], [0.8400000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4698364117804805, 0.9591500709358677, 1.8661261831332276, -2.1461664386994355, -0.82296096369195, 1.7899618815360476, -2.4451623665236863]], [0.85, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4661476133555407, 0.9598314603135993, 1.8644389613807277, -2.1435381325634264, -0.8190751846988811, 1.7889579944155802, -2.4447467781920347]], [0.86, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4626062038452878, 0.9605506733841509, 1.862808792685727, -2.1411142914539667, -0.8154041750103836, 1.7882439557069563, -2.4441851295718844]], [0.87, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.459217872615882, 0.9613074350010583, 1.8612395466614688, -2.138905038512047, -0.811959480841229, 1.7878340066680825, -2.443475309765723]], [0.88, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4559848396082873, 0.9620999491108928, 1.8597324789679943, -2.136914744632654, -0.8087466764340443, 1.787735449580238, -2.4426190904903144]], [0.89, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4529056751975324, 0.9629253650960862, 1.8582831039724592, -2.135144376330754, -0.8057666962304603, 1.7879513248374954, -2.441621791666357]], [0.9, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.449973503181155, 0.9637838993661592, 1.85688141053321, -2.1335920930161327, -0.803019613490288, 1.788478915992252, -2.4404894830024255]], [0.91, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4471961695654119, 0.9646575189463685, 1.8555985475737569, -2.132201612560168, -0.8004628420996726, 1.7892536144104285, -2.439232632032002]], [0.92, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.444547763441843, 0.9655594115996667, 1.8543413643807147, -2.1310132538083884, -0.7981237683897274, 1.7903203366837035, -2.4378598930875093]], [0.93, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4420361100049877, 0.966469229942098, 1.8531923239371924, -2.1299595343510385, -0.7959509609104746, 1.7916005599146114, -2.436382260427008]], [0.9400000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4396324863709236, 0.9674020792646667, 1.8520542602614987, -2.1290795785174206, -0.7939698548573303, 1.7931360297490622, -2.43480920364499]], [0.9500000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.43734503623503, 0.968337214491782, 1.8510114666194462, -2.1283047454791277, -0.7921278388036012, 1.7948466989087706, -2.43315053754267]], [0.9600000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4351458918705233, 0.9692902081371356, 1.8499675926374097, -2.1276743281252113, -0.7904494652062494, 1.7967739861608163, -2.43141543806277]], [0.97, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4330422214232745, 0.9702426021090496, 1.8490037577819025, -2.1271229817711457, -0.7888857251116639, 1.79884083334076, -2.429611185233852]], [0.98, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.431009300562149, 0.9712085969221051, 1.848030302757192, -2.1266882875514157, -0.7874588095003412, 1.8010870644499912, -2.4277466666119816]], [0.99, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4290557037861242, 0.9721701645035412, 1.8471234620484478, -2.1263114701896937, -0.7861239920311421, 1.8034440047606404, -2.425827525319288]], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4271584473933583, 0.9731416629984163, 1.8462012063262412, -2.126027107802925, -0.7849019357375018, 1.805947394978818, -2.4238614959490574]], [1.01, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4253253744307286, 0.974107479822651, 1.8453316589326672, -2.1257838362045236, -0.7837538790174409, 1.808537009778894, -2.421852400445685]], [1.02, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4235366165656993, 0.9750805900730453, 1.844445018817505, -2.1256108243018192, -0.7826971262468029, 1.8112423008500769, -2.4198069106683864]], [1.03, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4217982001952068, 0.9760485549177162, 1.8435907742211364, -2.125470395564999, -0.7817019325897369, 1.8140192267200856, -2.4177284217429147]], [1.04, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4200977692100845, 0.9770182750974522, 1.8427343290803542, -2.1253729623575124, -0.7807733841277086, 1.8168760862199438, -2.4156216134372817]], [1.05, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4184351585053372, 0.9779846885289502, 1.8418919479814089, -2.1253014988301273, -0.7798964048026293, 1.8197918416171, -2.4134899492058945]], [1.06, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4168028616167097, 0.9789508616437169, 1.8410469511542102, -2.125257927064044, -0.7790699792782572, 1.8227658092253918, -2.4113371885696067]], [1.07, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4152001963579761, 0.9799128411175955, 1.840207467917736, -2.1252313383838946, -0.7782826002373815, 1.8257842856880608, -2.409167029058152]], [1.08, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4136206796217021, 0.9808740549217375, 1.839363737143255, -2.1252207538384074, -0.777532888429356, 1.828842766956736, -2.4069815093495452]], [1.09, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4120630911964556, 0.9818324364883341, 1.8385212913170594, -2.125217956016201, -0.7768124506402376, 1.8319301265769359, -2.4047830608950527]], [1.1, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4104987260040442, 0.9827974321975922, 1.837664593706065, -2.1251899561650474, -0.7760698607485343, 1.8349759997422048, -2.4026184050335333]], [1.11, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4089238502920947, 0.9837706959457019, 1.8367981837858398, -2.1251280088675695, -0.7752939897244907, 1.8379633487488323, -2.4004959615100474]], [1.12, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4073393698314125, 0.9847532692332952, 1.8359200763548476, -2.1250362547637036, -0.7744882803620837, 1.8408971409449753, -2.398414661661265]], [1.1300000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4057468177733656, 0.9857456459130185, 1.8350333934510072, -2.1249157820144435, -0.7736546826547428, 1.8437787189011343, -2.396372772642296]], [1.1400000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4041477004856373, 0.9867474112407949, 1.8341374739170808, -2.1247694726361375, -0.7727946299821196, 1.8466121053426017, -2.3943701106568542]], [1.1500000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4025435749129305, 0.9877582166898484, 1.8332343883651696, -2.1245984482843876, -0.7719089904221608, 1.8493989915604692, -2.392405873830823]], [1.1600000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.4009347562296068, 0.9887795899095545, 1.8323243748912792, -2.1244046885201904, -0.7710007161456143, 1.8521413125454402, -2.3904783255626287]], [1.17, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3993223212837351, 0.9898116561672341, 1.8314095386132403, -2.1241888745998274, -0.7700708450321425, 1.854839950193828, -2.3885863753281296]], [1.18, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3977069051186215, 0.9908545286970298, 1.8304883044966795, -2.1239534961204516, -0.7691208193382035, 1.857498084458187, -2.386729874883053]], [1.19, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3960901461563249, 0.9919069406180052, 1.8295638808349204, -2.123698191172663, -0.7681497700992564, 1.8601158470054966, -2.3849086160376154]], [1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3944711903111706, 0.9929713178509569, 1.8286329685472615, -2.1234261390484, -0.7671615220575593, 1.8626962072403077, -2.3831212088744986]], [1.21, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3928525278536097, 0.9940448148448376, 1.8277013598271334, -2.123135219197809, -0.7661529923638808, 1.8652377295266933, -2.381368095774109]], [1.22, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.391232915026348, 0.9951298272313138, 1.8267634372491817, -2.1228294967866486, -0.7651279753109429, 1.8677444738029303, -2.379648582483931]], [1.23, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3896142069877497, 0.9962248712336623, 1.8258273300392354, -2.122505420294257, -0.7640843469975025, 1.8702125114201413, -2.3779614689285435]], [1.24, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3879944261325208, 0.9973325950424503, 1.8248818638242996, -2.12216972561625, -0.7630266101654309, 1.8726491641667318, -2.376307426542669]], [1.25, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3863781023587545, 0.9984480330457808, 1.8239478825043194, -2.1218117375202317, -0.7619472576232663, 1.8750429107802584, -2.3746845767414735]], [1.26, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3847584127398551, 0.9995792937270676, 1.8229912976514537, -2.1214502390282344, -0.7608589608883511, 1.8774139951216926, -2.3730956823197413]], [1.27, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3831459966370365, 1.0007143471792395, 1.8220634885127498, -2.121058154576959, -0.7597432999594144, 1.8797330067859477, -2.3715358606461194]], [1.28, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3815266063533636, 1.0018701349986665, 1.8210967994597511, -2.120671874005505, -0.7586256340224063, 1.882038785988668, -2.3700105611062527]], [1.29, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3799159756668389, 1.0030283637300077, 1.8201662682996131, -2.120251769983271, -0.7574785697877069, 1.8842885795743953, -2.368512884983806]], [1.3, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.378298998192532, 1.0042066895149835, 1.8191975501810018, -2.119837462867457, -0.7563283804746277, 1.8865249671869218, -2.3670499382481553]], [1.31, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3766910280157358, 1.005386767311344, 1.8182658088705508, -2.1193891109150824, -0.7551478140020068, 1.8887049248458139, -2.3656145039640637]], [1.32, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3750347498577586, 1.006652011772271, 1.8172864533227704, -2.118901747973429, -0.7539335075762734, 1.8907851782457044, -2.3644006758905]], [1.33, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3733873424287935, 1.0079220137634886, 1.8163478955364414, -2.1183794509929883, -0.752687856698523, 1.8928050435110901, -2.3632216279555287]], [1.34, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.371732422693783, 1.009216731899556, 1.8153700045785899, -2.117864683415956, -0.7514392651286099, 1.8948095969213303, -2.3620845815393468]], [1.35, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.370086827530629, 1.0105154789025248, 1.814433959575808, -2.1173150335130893, -0.7501590359243409, 1.896753804067476, -2.3609812873801688]], [1.36, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3693918709232635, 1.0115129145716102, 1.8138309409204725, -2.118133914208772, -0.7505329071646396, 1.9010398596711462, -2.3586770387333584]], [1.37, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3676820207873097, 1.012858838445504, 1.812830509499368, -2.1174881349435353, -0.7491305864324055, 1.9027850320740267, -2.3577054463179907]], [1.3800000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3659850485668017, 1.014208335563775, 1.811874175841102, -2.116813170032257, -0.7477023122313072, 1.9044779836319472, -2.35676289099341]], [1.3900000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.364283233352289, 1.0155833619173902, 1.8108774047711795, -2.116152622583841, -0.7462772388824098, 1.906164257002384, -2.355857578566129]], [1.4000000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3636859028590544, 1.0165937937746883, 1.810334707489041, -2.1169497963858928, -0.7465926966887687, 1.9103230335126693, -2.3536206594387545]], [1.4100000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.361929448221048, 1.0180094388793242, 1.8093038645198682, -2.116185854104583, -0.7450416677974413, 1.911802486547263, -2.3528382431090913]], [1.42, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3601899849462689, 1.0194255020461334, 1.8083275650531654, -2.115392058281307, -0.7434652401546276, 1.9132301532094664, -2.3520792273754605]], [1.43, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.359635241510208, 1.020478107650866, 1.8077563405195192, -2.1161902705252063, -0.743727168053626, 1.917280784140684, -2.349936036049667]], [1.44, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3579446953744834, 1.021932868119444, 1.8067704969452425, -2.1154261598583366, -0.7421480636495894, 1.9186754484486925, -2.3492257216649133]], [1.45, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3563618238200459, 1.0233832363070772, 1.805866412535268, -2.114740940155788, -0.7406446966137673, 1.9201613594339901, -2.3484758995896025]], [1.46, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.355856563828519, 1.0244713393560694, 1.805304610711135, -2.115517330352463, -0.7408290860150234, 1.924068347325752, -2.34642621564045]], [1.47, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.354321879632158, 1.0259603279503848, 1.8043830680404471, -2.1148669457374836, -0.7393245325838592, 1.9255258293592141, -2.345721164239778]], [1.48, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3538362359335556, 1.0270702459152146, 1.8038658807834511, -2.115572722497517, -0.7393989779341518, 1.9292525286452586, -2.3437550016493374]], [1.49, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3523679044999726, 1.0285886861076672, 1.802955994343927, -2.1149616213216826, -0.7379003388128063, 1.9306915520215315, -2.343079003279719]], [1.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3510030019828672, 1.0300978967892511, 1.8021327126055946, -2.114417585697648, -0.7364649266346242, 1.9322057508123112, -2.3423634055298406]], [1.51, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3505587772659304, 1.0312626926930246, 1.801589863453898, -2.115122539322599, -0.7364665120518405, 1.9357946585511057, -2.3405096072792557]], [1.52, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3492559830882989, 1.0328024101355289, 1.8007638528550158, -2.1146227759658, -0.7350372226747252, 1.9372936905483815, -2.3398205687278186]], [1.53, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3480440995992702, 1.034335780408022, 1.8000055690984318, -2.1141855420498508, -0.7336628266601534, 1.9388578767814637, -2.3390984145608895]], [1.54, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3476477578953898, 1.0355459217077834, 1.799478317631493, -2.1148634272098996, -0.7335662628026491, 1.9422722081739088, -2.337351748644184]], [1.55, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.346498355654647, 1.0371079141733728, 1.7987135045782232, -2.1144736600068503, -0.7321976344406318, 1.9438233397488562, -2.3366501819086962]], [1.56, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3461287613524329, 1.0383429004381355, 1.798235383717522, -2.1150909806420586, -0.731992904515881, 1.9470593329380679, -2.334983220221991]], [1.57, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3450534709669426, 1.0399261149675643, 1.7974826243787962, -2.1147514496067923, -0.7306335465595584, 1.9486031408283893, -2.33428978605617]], [1.58, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.344066573063048, 1.0414970539174364, 1.796806821616846, -2.1144617628314113, -0.7293155724908038, 1.950194282664002, -2.333560748592796]], [1.59, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3437389636541242, 1.042793317233475, 1.7963092955498552, -2.115074727674196, -0.7290217406113001, 1.953268355813735, -2.332011463314984]], [1.6, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3428243646382314, 1.0443841746272342, 1.7956375648418748, -2.1148383253391994, -0.7277114206213323, 1.9548528684164084, -2.331284984234477]], [1.61, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3425281537162297, 1.04570530559122, 1.7951895402503115, -2.115398700139416, -0.7273124980614999, 1.95775357400521, -2.329808043599007]], [1.62, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.341691890419206, 1.0473113126207718, 1.7945295145569289, -2.1152184539408005, -0.7260112261400907, 1.9593350348241583, -2.32907465636181]], [1.6300000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3414220634717386, 1.0486695732764655, 1.7940943952647552, -2.11575067100632, -0.7255243338565318, 1.9620868954325925, -2.32767695676073]], [1.6400000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3406749156758684, 1.050281338496371, 1.7934685025257497, -2.1156246298167583, -0.724230853061173, 1.963664542192615, -2.326923395118869]], [1.6500000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3404344330665747, 1.0516748958028501, 1.7930488116391017, -2.116131097883031, -0.7236566768003073, 1.966269296783456, -2.325598848380107]], [1.6600000000000001, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3397781691736865, 1.0532894279790483, 1.7924569390154548, -2.116061641429897, -0.7223701347220408, 1.9678441362358727, -2.3248177117243225]], [1.6700000000000002, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.339569484005705, 1.0547167880252921, 1.7920533184125098, -2.116545490039424, -0.7217095658180235, 1.9703040225305208, -2.323560197066586]], [1.68, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.339359673105373, 1.056181649342254, 1.7916119045441292, -2.117030626850674, -0.7210094135498318, 1.9726943839391404, -2.3223623268346456]], [1.69, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3391652862796104, 1.0576578440698168, 1.7912005964987125, -2.1174844193041262, -0.7202456890845532, 1.9749833687777008, -2.321195359684759]], [1.7, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3386811846912583, 1.0592657611097451, 1.7906890178857018, -2.1174989230236645, -0.7189312580506193, 1.976499514817504, -2.3203434052881593]], [1.71, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.338530520117538, 1.0607626500884264, 1.790317265023113, -2.1179279359877445, -0.7180763186495116, 1.9786409414315782, -2.319217053298698]], [1.72, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3383862318917403, 1.0622910192013055, 1.7899123554250909, -2.1183651790848015, -0.7171874186780918, 1.9807229393838013, -2.318134814415441]], [1.73, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3382670986098484, 1.0638205185931289, 1.7895526739678633, -2.1187731194097714, -0.7162356862228801, 1.9827082665554794, -2.31706217311916]], [1.74, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3381599807279543, 1.0653751569504917, 1.7891699238520555, -2.1191890006027743, -0.7152492425546993, 1.9846350883478723, -2.3160214478660244]], [1.75, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3380821676474592, 1.0669272429484873, 1.7888347353588923, -2.119579849731662, -0.7142021540920814, 1.9864707668820092, -2.31497988748986]], [1.76, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.338019023603235, 1.0685032022562428, 1.7884725394421324, -2.119985442785621, -0.7131239739296529, 1.9882552506838294, -2.3139625373868644]], [1.77, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3379896617552198, 1.0700725660616264, 1.7881610295828594, -2.1203699042264286, -0.7119852797295285, 1.9899523999646223, -2.312932144640691]], [1.78, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3379794549519664, 1.0716620002374626, 1.7878244858395904, -2.1207733987109076, -0.7108130222589526, 1.991599758443355, -2.311912147678479]], [1.79, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.33801009905796, 1.0732385807554554, 1.7875451340593231, -2.121159045227623, -0.709554285856127, 1.9931398798831739, -2.3108461584971955]], [1.8, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.338062286455142, 1.074834816531352, 1.7872356635193605, -2.1215729218327803, -0.7082986017700806, 1.9946710500857279, -2.3098024562519437]], [1.81, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3381448715161446, 1.0764265418235108, 1.7869639800450356, -2.121978554066833, -0.7071078753404205, 1.9962387024716672, -2.308818138004361]], [1.82, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3382579037913365, 1.078028770579829, 1.7866713962516052, -2.122413190705513, -0.7058519931042568, 1.9977354702953172, -2.30779425367493]], [1.83, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3383943212400438, 1.0796264857732605, 1.7864099358178294, -2.1228370868361894, -0.7047009425687674, 1.9992985378375958, -2.3068644139275585]], [1.84, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.338567157047893, 1.0812280949827984, 1.7861316974875443, -2.123294282154748, -0.7034776537923106, 2.000787446720389, -2.305874254857764]], [1.85, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.8, 0, 0, 0, 1, [-1.3387609179679387, 1.0828191931061348, 1.7858850464085014, -2.123736613794907, -0.7023584242981638, 2.0023334858142356, -2.3049783593936426]]], htm_var_robot_id_139963660066384_base_0, htm_var_robot_id_139963660066384_n_eef,true);
+sceneElements.push(var_var_robot_id_139963660066384);
+
+//BEGIN DECLARATION OF THE GROUP 'var_group_id_139963660183120'
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963660176464'
+
+const material_var_cylinder_id_139963660176464 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "red",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963660176464 = new Cylinder(0.004,0.1,[[0, 0.0, 1.0, -0.0, 0.05, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -0.0, 0.0, 0, 0, 0, 1], [0, 0.0698, 0.9976, 0.0, 0.1523, -0.0, 0.0, 1.0, 0.0, 0.9976, -0.0698, 0.0, 1.6516, 0, 0, 0, 1], [0, 0.0698, 0.9976, 0.0, 0.1523, -0.0, 0.0, 1.0, 0.0, 0.9976, -0.0698, 0.0, 1.6516, 0, 0, 0, 1], [0, -0.3094, -0.95, 0.0419, 0.4404, 0.1436, -0.0902, -0.9855, -0.041, 0.94, -0.2989, 0.1643, 1.1126, 0, 0, 0, 1], [0.01, -0.3064, -0.951, 0.0413, 0.4408, 0.1407, -0.0881, -0.9861, -0.0397, 0.9414, -0.2964, 0.1608, 1.1138, 0, 0, 0, 1], [0.02, -0.3035, -0.952, 0.0407, 0.4411, 0.1378, -0.0861, -0.9867, -0.0383, 0.9428, -0.2938, 0.1573, 1.115, 0, 0, 0, 1], [0.03, -0.3005, -0.9529, 0.04, 0.4414, 0.1348, -0.084, -0.9873, -0.037, 0.9442, -0.2913, 0.1537, 1.1161, 0, 0, 0, 1], [0.04, -0.2976, -0.9539, 0.0394, 0.4418, 0.1319, -0.082, -0.9879, -0.0357, 0.9455, -0.2888, 0.1502, 1.1173, 0, 0, 0, 1], [0.05, -0.2946, -0.9548, 0.0388, 0.4421, 0.1289, -0.08, -0.9884, -0.0344, 0.9469, -0.2862, 0.1466, 1.1185, 0, 0, 0, 1], [0.060000000000000005, -0.2917, -0.9558, 0.0382, 0.4424, 0.1259, -0.078, -0.989, -0.0331, 0.9482, -0.2837, 0.1431, 1.1196, 0, 0, 0, 1], [0.06999999999999999, -0.2887, -0.9567, 0.0376, 0.4427, 0.123, -0.076, -0.9895, -0.0318, 0.9495, -0.2811, 0.1396, 1.1207, 0, 0, 0, 1], [0.08, -0.2858, -0.9576, 0.037, 0.443, 0.12, -0.074, -0.99, -0.0305, 0.9507, -0.2785, 0.1361, 1.1218, 0, 0, 0, 1], [0.09, -0.2829, -0.9585, 0.0364, 0.4433, 0.117, -0.0721, -0.9905, -0.0292, 0.952, -0.2759, 0.1325, 1.1229, 0, 0, 0, 1], [0.09999999999999999, -0.2799, -0.9594, 0.0358, 0.4435, 0.114, -0.0702, -0.991, -0.0279, 0.9532, -0.2733, 0.129, 1.124, 0, 0, 0, 1], [0.11, -0.277, -0.9602, 0.0352, 0.4438, 0.111, -0.0683, -0.9915, -0.0267, 0.9544, -0.2707, 0.1255, 1.1251, 0, 0, 0, 1], [0.12, -0.274, -0.9611, 0.0346, 0.4441, 0.108, -0.0665, -0.9919, -0.0254, 0.9556, -0.2681, 0.122, 1.1262, 0, 0, 0, 1], [0.13, -0.2711, -0.962, 0.034, 0.4443, 0.1049, -0.0646, -0.9924, -0.0242, 0.9568, -0.2654, 0.1185, 1.1273, 0, 0, 0, 1], [0.14, -0.2681, -0.9628, 0.0334, 0.4446, 0.1019, -0.0628, -0.9928, -0.0229, 0.958, -0.2628, 0.115, 1.1283, 0, 0, 0, 1], [0.15000000000000002, -0.2652, -0.9636, 0.0328, 0.4449, 0.0989, -0.061, -0.9932, -0.0217, 0.9591, -0.2602, 0.1114, 1.1293, 0, 0, 0, 1], [0.16, -0.2622, -0.9645, 0.0322, 0.4451, 0.0958, -0.0593, -0.9936, -0.0205, 0.9602, -0.2575, 0.1079, 1.1304, 0, 0, 0, 1], [0.17, -0.2593, -0.9653, 0.0317, 0.4453, 0.0927, -0.0575, -0.994, -0.0193, 0.9613, -0.2548, 0.1044, 1.1314, 0, 0, 0, 1], [0.18000000000000002, -0.2564, -0.9661, 0.0311, 0.4456, 0.0897, -0.0558, -0.9944, -0.0181, 0.9624, -0.2521, 0.1009, 1.1324, 0, 0, 0, 1], [0.19, -0.2534, -0.9669, 0.0306, 0.4458, 0.0866, -0.0541, -0.9948, -0.0168, 0.9635, -0.2494, 0.0974, 1.1334, 0, 0, 0, 1], [0.2, -0.2505, -0.9677, 0.03, 0.446, 0.0835, -0.0525, -0.9951, -0.0156, 0.9645, -0.2467, 0.0939, 1.1343, 0, 0, 0, 1], [0.21000000000000002, -0.2475, -0.9684, 0.0295, 0.4462, 0.0804, -0.0508, -0.9955, -0.0145, 0.9655, -0.244, 0.0904, 1.1353, 0, 0, 0, 1], [0.22, -0.2446, -0.9692, 0.029, 0.4464, 0.0773, -0.0492, -0.9958, -0.0133, 0.9666, -0.2413, 0.0869, 1.1363, 0, 0, 0, 1], [0.23, -0.2416, -0.97, 0.0284, 0.4466, 0.0741, -0.0477, -0.9961, -0.0121, 0.9675, -0.2385, 0.0834, 1.1372, 0, 0, 0, 1], [0.24000000000000002, -0.2386, -0.9707, 0.0279, 0.4468, 0.071, -0.0461, -0.9964, -0.0109, 0.9685, -0.2358, 0.0799, 1.1381, 0, 0, 0, 1], [0.25, -0.2357, -0.9714, 0.0274, 0.447, 0.0679, -0.0446, -0.9967, -0.0097, 0.9695, -0.233, 0.0764, 1.1391, 0, 0, 0, 1], [0.26, -0.2327, -0.9722, 0.0269, 0.4472, 0.0647, -0.0431, -0.997, -0.0086, 0.9704, -0.2303, 0.073, 1.14, 0, 0, 0, 1], [0.27, -0.2297, -0.9729, 0.0265, 0.4474, 0.0616, -0.0417, -0.9972, -0.0074, 0.9713, -0.2275, 0.0695, 1.1409, 0, 0, 0, 1], [0.28, -0.2268, -0.9736, 0.026, 0.4476, 0.0584, -0.0402, -0.9975, -0.0063, 0.9722, -0.2247, 0.066, 1.1418, 0, 0, 0, 1], [0.29000000000000004, -0.2238, -0.9743, 0.0256, 0.4477, 0.0552, -0.0389, -0.9977, -0.0051, 0.9731, -0.2219, 0.0625, 1.1426, 0, 0, 0, 1], [0.3, -0.2208, -0.975, 0.0251, 0.4479, 0.052, -0.0375, -0.9979, -0.004, 0.9739, -0.2191, 0.059, 1.1435, 0, 0, 0, 1], [0.31, -0.2178, -0.9757, 0.0247, 0.4481, 0.0488, -0.0362, -0.9982, -0.0028, 0.9748, -0.2162, 0.0555, 1.1443, 0, 0, 0, 1], [0.32, -0.2149, -0.9763, 0.0243, 0.4482, 0.0456, -0.0349, -0.9983, -0.0017, 0.9756, -0.2134, 0.052, 1.1452, 0, 0, 0, 1], [0.33, -0.2119, -0.977, 0.0239, 0.4484, 0.0424, -0.0336, -0.9985, -0.0006, 0.9764, -0.2105, 0.0486, 1.146, 0, 0, 0, 1], [0.34, -0.2089, -0.9777, 0.0235, 0.4486, 0.0392, -0.0324, -0.9987, 0.0006, 0.9772, -0.2077, 0.0451, 1.1468, 0, 0, 0, 1], [0.35000000000000003, -0.2059, -0.9783, 0.0231, 0.4487, 0.036, -0.0312, -0.9989, 0.0017, 0.9779, -0.2048, 0.0416, 1.1476, 0, 0, 0, 1], [0.36000000000000004, -0.2028, -0.9789, 0.0228, 0.4488, 0.0327, -0.03, -0.999, 0.0028, 0.9787, -0.2019, 0.0381, 1.1484, 0, 0, 0, 1], [0.37, -0.1998, -0.9796, 0.0225, 0.449, 0.0295, -0.0289, -0.9991, 0.0039, 0.9794, -0.199, 0.0346, 1.1492, 0, 0, 0, 1], [0.38, -0.1968, -0.9802, 0.0221, 0.4491, 0.0262, -0.0278, -0.9993, 0.005, 0.9801, -0.1961, 0.0312, 1.15, 0, 0, 0, 1], [0.39, -0.1938, -0.9808, 0.0218, 0.4493, 0.0229, -0.0268, -0.9994, 0.0061, 0.9808, -0.1931, 0.0277, 1.1507, 0, 0, 0, 1], [0.4, -0.1907, -0.9814, 0.0216, 0.4494, 0.0197, -0.0258, -0.9995, 0.0072, 0.9815, -0.1902, 0.0242, 1.1515, 0, 0, 0, 1], [0.41000000000000003, -0.1876, -0.982, 0.0213, 0.4495, 0.0164, -0.0248, -0.9996, 0.0083, 0.9821, -0.1872, 0.0207, 1.1522, 0, 0, 0, 1], [0.42000000000000004, -0.1846, -0.9826, 0.021, 0.4496, 0.0131, -0.0239, -0.9996, 0.0094, 0.9827, -0.1842, 0.0173, 1.1529, 0, 0, 0, 1], [0.43, -0.1815, -0.9832, 0.0208, 0.4498, 0.0098, -0.023, -0.9997, 0.0105, 0.9833, -0.1812, 0.0138, 1.1536, 0, 0, 0, 1], [0.44, -0.1784, -0.9837, 0.0206, 0.4499, 0.0065, -0.0221, -0.9997, 0.0116, 0.9839, -0.1782, 0.0103, 1.1543, 0, 0, 0, 1], [0.45, -0.1753, -0.9843, 0.0204, 0.45, 0.0031, -0.0213, -0.9998, 0.0127, 0.9845, -0.1752, 0.0068, 1.155, 0, 0, 0, 1], [0.46, -0.1721, -0.9849, 0.0203, 0.4501, -0.0002, -0.0205, -0.9998, 0.0138, 0.9851, -0.1721, 0.0033, 1.1557, 0, 0, 0, 1], [0.47000000000000003, -0.169, -0.9854, 0.0201, 0.4502, -0.0035, -0.0198, -0.9998, 0.0149, 0.9856, -0.169, -0.0001, 1.1564, 0, 0, 0, 1], [0.48000000000000004, -0.1658, -0.986, 0.02, 0.4503, -0.0069, -0.0191, -0.9998, 0.016, 0.9861, -0.1659, -0.0036, 1.157, 0, 0, 0, 1], [0.49, -0.1626, -0.9865, 0.0199, 0.4505, -0.0102, -0.0185, -0.9998, 0.0171, 0.9866, -0.1628, -0.0071, 1.1577, 0, 0, 0, 1], [0.5, -0.1594, -0.987, 0.0198, 0.4506, -0.0136, -0.0179, -0.9997, 0.0181, 0.9871, -0.1596, -0.0106, 1.1583, 0, 0, 0, 1], [0.51, -0.1562, -0.9875, 0.0197, 0.4507, -0.017, -0.0173, -0.9997, 0.0192, 0.9876, -0.1564, -0.0141, 1.1589, 0, 0, 0, 1], [0.52, -0.1529, -0.988, 0.0197, 0.4508, -0.0204, -0.0168, -0.9997, 0.0203, 0.988, -0.1532, -0.0175, 1.1596, 0, 0, 0, 1], [0.53, -0.1496, -0.9885, 0.0197, 0.4509, -0.0237, -0.0163, -0.9996, 0.0214, 0.9885, -0.15, -0.021, 1.1602, 0, 0, 0, 1], [0.54, -0.1463, -0.989, 0.0197, 0.451, -0.0271, -0.0159, -0.9995, 0.0225, 0.9889, -0.1467, -0.0245, 1.1608, 0, 0, 0, 1], [0.55, -0.1429, -0.9895, 0.0197, 0.4511, -0.0305, -0.0155, -0.9994, 0.0235, 0.9893, -0.1434, -0.028, 1.1613, 0, 0, 0, 1], [0.56, -0.1395, -0.99, 0.0198, 0.4512, -0.034, -0.0152, -0.9993, 0.0246, 0.9896, -0.1401, -0.0315, 1.1619, 0, 0, 0, 1], [0.5700000000000001, -0.1361, -0.9905, 0.0198, 0.4513, -0.0374, -0.0149, -0.9992, 0.0257, 0.99, -0.1367, -0.035, 1.1625, 0, 0, 0, 1], [0.5800000000000001, -0.1326, -0.991, 0.0199, 0.4514, -0.0408, -0.0146, -0.9991, 0.0268, 0.9903, -0.1333, -0.0385, 1.163, 0, 0, 0, 1], [0.59, -0.1291, -0.9914, 0.02, 0.4515, -0.0443, -0.0144, -0.9989, 0.0278, 0.9906, -0.1299, -0.042, 1.1635, 0, 0, 0, 1], [0.6, -0.1256, -0.9919, 0.0202, 0.4516, -0.0477, -0.0143, -0.9988, 0.0289, 0.9909, -0.1264, -0.0455, 1.1641, 0, 0, 0, 1], [0.61, -0.122, -0.9923, 0.0203, 0.4517, -0.0512, -0.0142, -0.9986, 0.03, 0.9912, -0.1228, -0.049, 1.1646, 0, 0, 0, 1], [0.62, -0.1183, -0.9928, 0.0205, 0.4519, -0.0546, -0.0141, -0.9984, 0.0311, 0.9915, -0.1192, -0.0525, 1.1651, 0, 0, 0, 1], [0.63, -0.1146, -0.9932, 0.0207, 0.452, -0.0581, -0.0141, -0.9982, 0.0322, 0.9917, -0.1156, -0.0561, 1.1656, 0, 0, 0, 1], [0.64, -0.1108, -0.9936, 0.0209, 0.4521, -0.0616, -0.0141, -0.998, 0.0332, 0.9919, -0.1118, -0.0596, 1.1661, 0, 0, 0, 1], [0.65, -0.1069, -0.994, 0.0211, 0.4522, -0.065, -0.0142, -0.9978, 0.0343, 0.9921, -0.108, -0.0631, 1.1666, 0, 0, 0, 1], [0.66, -0.1029, -0.9945, 0.0214, 0.4523, -0.0685, -0.0144, -0.9975, 0.0354, 0.9923, -0.1041, -0.0667, 1.1671, 0, 0, 0, 1], [0.67, -0.0989, -0.9949, 0.0217, 0.4525, -0.072, -0.0146, -0.9973, 0.0365, 0.9925, -0.1002, -0.0702, 1.1675, 0, 0, 0, 1], [0.68, -0.0948, -0.9953, 0.0219, 0.4526, -0.0756, -0.0148, -0.997, 0.0376, 0.9926, -0.0961, -0.0738, 1.168, 0, 0, 0, 1], [0.6900000000000001, -0.0905, -0.9956, 0.0223, 0.4527, -0.0791, -0.0151, -0.9968, 0.0386, 0.9928, -0.092, -0.0774, 1.1684, 0, 0, 0, 1], [0.7000000000000001, -0.0862, -0.996, 0.0226, 0.4529, -0.0826, -0.0154, -0.9965, 0.0397, 0.9929, -0.0877, -0.0809, 1.1689, 0, 0, 0, 1], [0.7100000000000001, -0.0817, -0.9964, 0.0229, 0.453, -0.0861, -0.0159, -0.9962, 0.0408, 0.9929, -0.0833, -0.0845, 1.1693, 0, 0, 0, 1], [0.72, -0.0771, -0.9968, 0.0233, 0.4532, -0.0897, -0.0163, -0.9958, 0.0419, 0.993, -0.0788, -0.0881, 1.1697, 0, 0, 0, 1], [0.73, -0.0723, -0.9971, 0.0236, 0.4533, -0.0933, -0.0168, -0.9955, 0.043, 0.993, -0.0742, -0.0918, 1.1702, 0, 0, 0, 1], [0.74, -0.0675, -0.9974, 0.0239, 0.4535, -0.0968, -0.0173, -0.9952, 0.044, 0.993, -0.0695, -0.0954, 1.1706, 0, 0, 0, 1], [0.75, -0.0628, -0.9977, 0.0241, 0.4537, -0.1004, -0.0177, -0.9948, 0.0451, 0.993, -0.0649, -0.0991, 1.171, 0, 0, 0, 1], [0.76, -0.0581, -0.998, 0.0242, 0.4538, -0.104, -0.0181, -0.9944, 0.0461, 0.9929, -0.0603, -0.1027, 1.1714, 0, 0, 0, 1], [0.77, -0.0535, -0.9983, 0.0243, 0.454, -0.1076, -0.0184, -0.994, 0.0472, 0.9928, -0.0558, -0.1064, 1.1717, 0, 0, 0, 1], [0.78, -0.0489, -0.9985, 0.0242, 0.4542, -0.1112, -0.0187, -0.9936, 0.0482, 0.9926, -0.0512, -0.1101, 1.1721, 0, 0, 0, 1], [0.79, -0.0443, -0.9987, 0.0241, 0.4544, -0.1148, -0.0189, -0.9932, 0.0492, 0.9924, -0.0468, -0.1138, 1.1725, 0, 0, 0, 1], [0.8, -0.0399, -0.9989, 0.0239, 0.4546, -0.1184, -0.0191, -0.9928, 0.0503, 0.9922, -0.0425, -0.1175, 1.1728, 0, 0, 0, 1], [0.81, -0.0357, -0.9991, 0.0237, 0.4548, -0.122, -0.0192, -0.9923, 0.0513, 0.9919, -0.0383, -0.1212, 1.1731, 0, 0, 0, 1], [0.8200000000000001, -0.0316, -0.9992, 0.0233, 0.455, -0.1256, -0.0192, -0.9919, 0.0523, 0.9916, -0.0342, -0.1249, 1.1734, 0, 0, 0, 1], [0.8300000000000001, -0.0277, -0.9994, 0.0229, 0.4552, -0.1293, -0.0192, -0.9914, 0.0533, 0.9912, -0.0304, -0.1286, 1.1737, 0, 0, 0, 1], [0.8400000000000001, -0.024, -0.9995, 0.0224, 0.4554, -0.1329, -0.0191, -0.9909, 0.0543, 0.9908, -0.0267, -0.1324, 1.1739, 0, 0, 0, 1], [0.85, -0.0205, -0.9995, 0.0219, 0.4556, -0.1365, -0.0189, -0.9905, 0.0553, 0.9904, -0.0233, -0.1361, 1.1741, 0, 0, 0, 1], [0.86, -0.0174, -0.9996, 0.0212, 0.4557, -0.1401, -0.0186, -0.99, 0.0564, 0.99, -0.0202, -0.1398, 1.1743, 0, 0, 0, 1], [0.87, -0.0145, -0.9997, 0.0205, 0.4559, -0.1438, -0.0182, -0.9894, 0.0574, 0.9895, -0.0173, -0.1434, 1.1745, 0, 0, 0, 1], [0.88, -0.012, -0.9997, 0.0198, 0.4561, -0.1474, -0.0178, -0.9889, 0.0584, 0.989, -0.0148, -0.1471, 1.1747, 0, 0, 0, 1], [0.89, -0.0097, -0.9998, 0.019, 0.4563, -0.151, -0.0173, -0.9884, 0.0595, 0.9885, -0.0125, -0.1508, 1.1748, 0, 0, 0, 1], [0.9, -0.0078, -0.9998, 0.0181, 0.4565, -0.1545, -0.0167, -0.9878, 0.0605, 0.988, -0.0105, -0.1544, 1.1749, 0, 0, 0, 1], [0.91, -0.0061, -0.9998, 0.0172, 0.4567, -0.1581, -0.016, -0.9873, 0.0616, 0.9874, -0.0088, -0.158, 1.175, 0, 0, 0, 1], [0.92, -0.0047, -0.9999, 0.0162, 0.4569, -0.1617, -0.0152, -0.9867, 0.0626, 0.9868, -0.0073, -0.1616, 1.175, 0, 0, 0, 1], [0.93, -0.0036, -0.9999, 0.0152, 0.4571, -0.1652, -0.0144, -0.9862, 0.0637, 0.9863, -0.0061, -0.1651, 1.1751, 0, 0, 0, 1], [0.9400000000000001, -0.0027, -0.9999, 0.0141, 0.4574, -0.1687, -0.0134, -0.9856, 0.0647, 0.9857, -0.0051, -0.1687, 1.1751, 0, 0, 0, 1], [0.9500000000000001, -0.0021, -0.9999, 0.013, 0.4576, -0.1723, -0.0125, -0.985, 0.0658, 0.985, -0.0043, -0.1722, 1.1752, 0, 0, 0, 1], [0.9600000000000001, -0.0016, -0.9999, 0.0119, 0.4578, -0.1758, -0.0114, -0.9844, 0.0668, 0.9844, -0.0036, -0.1757, 1.1752, 0, 0, 0, 1], [0.97, -0.0013, -0.9999, 0.0107, 0.458, -0.1792, -0.0103, -0.9838, 0.0679, 0.9838, -0.0032, -0.1792, 1.1752, 0, 0, 0, 1], [0.98, -0.0012, -1.0, 0.0095, 0.4582, -0.1827, -0.0092, -0.9831, 0.0689, 0.9832, -0.0029, -0.1827, 1.1753, 0, 0, 0, 1], [0.99, -0.0012, -1.0, 0.0083, 0.4585, -0.1862, -0.0079, -0.9825, 0.07, 0.9825, -0.0027, -0.1861, 1.1753, 0, 0, 0, 1], [1.0, -0.0013, -1.0, 0.0071, 0.4587, -0.1896, -0.0067, -0.9818, 0.071, 0.9819, -0.0026, -0.1896, 1.1753, 0, 0, 0, 1], [1.01, -0.0016, -1.0, 0.0058, 0.459, -0.193, -0.0054, -0.9812, 0.072, 0.9812, -0.0027, -0.193, 1.1753, 0, 0, 0, 1], [1.02, -0.0019, -1.0, 0.0045, 0.4592, -0.1964, -0.004, -0.9805, 0.0731, 0.9805, -0.0028, -0.1964, 1.1753, 0, 0, 0, 1], [1.03, -0.0024, -1.0, 0.0031, 0.4595, -0.1998, -0.0026, -0.9798, 0.0741, 0.9798, -0.0029, -0.1998, 1.1753, 0, 0, 0, 1], [1.04, -0.0029, -1.0, 0.0017, 0.4597, -0.2032, -0.0011, -0.9791, 0.0751, 0.9791, -0.0032, -0.2032, 1.1752, 0, 0, 0, 1], [1.05, -0.0035, -1.0, 0.0004, 0.46, -0.2066, 0.0004, -0.9784, 0.0761, 0.9784, -0.0035, -0.2066, 1.1752, 0, 0, 0, 1], [1.06, -0.0041, -1.0, -0.0011, 0.4603, -0.21, 0.0019, -0.9777, 0.0771, 0.9777, -0.0038, -0.21, 1.1752, 0, 0, 0, 1], [1.07, -0.0048, -1.0, -0.0025, 0.4605, -0.2133, 0.0035, -0.977, 0.0781, 0.977, -0.0042, -0.2133, 1.1752, 0, 0, 0, 1], [1.08, -0.0056, -1.0, -0.004, 0.4608, -0.2167, 0.0051, -0.9762, 0.0791, 0.9762, -0.0046, -0.2167, 1.1752, 0, 0, 0, 1], [1.09, -0.0064, -1.0, -0.0055, 0.4611, -0.22, 0.0067, -0.9755, 0.0801, 0.9755, -0.005, -0.2201, 1.1751, 0, 0, 0, 1], [1.1, -0.0071, -1.0, -0.0069, 0.4614, -0.2234, 0.0084, -0.9747, 0.081, 0.9747, -0.0053, -0.2234, 1.1751, 0, 0, 0, 1], [1.11, -0.0077, -0.9999, -0.0084, 0.4617, -0.2267, 0.01, -0.9739, 0.082, 0.9739, -0.0056, -0.2268, 1.1751, 0, 0, 0, 1], [1.12, -0.0084, -0.9999, -0.0099, 0.462, -0.23, 0.0116, -0.9731, 0.0829, 0.9731, -0.0059, -0.2301, 1.1751, 0, 0, 0, 1], [1.1300000000000001, -0.0089, -0.9999, -0.0114, 0.4622, -0.2334, 0.0131, -0.9723, 0.0839, 0.9723, -0.006, -0.2335, 1.1751, 0, 0, 0, 1], [1.1400000000000001, -0.0094, -0.9999, -0.0128, 0.4625, -0.2367, 0.0147, -0.9715, 0.0848, 0.9715, -0.0061, -0.2368, 1.1751, 0, 0, 0, 1], [1.1500000000000001, -0.0099, -0.9998, -0.0142, 0.4628, -0.24, 0.0162, -0.9706, 0.0857, 0.9707, -0.0062, -0.2402, 1.1751, 0, 0, 0, 1], [1.1600000000000001, -0.0103, -0.9998, -0.0157, 0.4631, -0.2434, 0.0177, -0.9698, 0.0866, 0.9699, -0.0062, -0.2435, 1.1751, 0, 0, 0, 1], [1.17, -0.0107, -0.9998, -0.0171, 0.4634, -0.2467, 0.0192, -0.9689, 0.0875, 0.969, -0.0061, -0.2469, 1.1751, 0, 0, 0, 1], [1.18, -0.011, -0.9998, -0.0185, 0.4636, -0.2501, 0.0207, -0.968, 0.0884, 0.9682, -0.006, -0.2502, 1.1751, 0, 0, 0, 1], [1.19, -0.0113, -0.9997, -0.0199, 0.4639, -0.2534, 0.0221, -0.9671, 0.0893, 0.9673, -0.0059, -0.2536, 1.1751, 0, 0, 0, 1], [1.2, -0.0115, -0.9997, -0.0213, 0.4642, -0.2567, 0.0235, -0.9662, 0.0902, 0.9664, -0.0057, -0.2569, 1.1751, 0, 0, 0, 1], [1.21, -0.0118, -0.9997, -0.0227, 0.4644, -0.2601, 0.025, -0.9653, 0.091, 0.9655, -0.0055, -0.2603, 1.1751, 0, 0, 0, 1], [1.22, -0.0119, -0.9996, -0.0241, 0.4647, -0.2634, 0.0263, -0.9643, 0.0919, 0.9646, -0.0052, -0.2636, 1.1751, 0, 0, 0, 1], [1.23, -0.0121, -0.9996, -0.0254, 0.465, -0.2667, 0.0277, -0.9634, 0.0927, 0.9637, -0.0049, -0.2669, 1.1752, 0, 0, 0, 1], [1.24, -0.0122, -0.9996, -0.0268, 0.4653, -0.27, 0.0291, -0.9624, 0.0936, 0.9628, -0.0045, -0.2703, 1.1752, 0, 0, 0, 1], [1.25, -0.0123, -0.9995, -0.0281, 0.4655, -0.2734, 0.0304, -0.9614, 0.0944, 0.9618, -0.0041, -0.2736, 1.1752, 0, 0, 0, 1], [1.26, -0.0123, -0.9995, -0.0295, 0.4658, -0.2767, 0.0317, -0.9604, 0.0952, 0.9609, -0.0037, -0.2769, 1.1752, 0, 0, 0, 1], [1.27, -0.0123, -0.9995, -0.0308, 0.4661, -0.28, 0.033, -0.9594, 0.096, 0.9599, -0.0032, -0.2803, 1.1752, 0, 0, 0, 1], [1.28, -0.0123, -0.9994, -0.0321, 0.4663, -0.2833, 0.0343, -0.9584, 0.0968, 0.9589, -0.0027, -0.2836, 1.1753, 0, 0, 0, 1], [1.29, -0.0122, -0.9994, -0.0334, 0.4666, -0.2867, 0.0355, -0.9574, 0.0976, 0.958, -0.0021, -0.2869, 1.1753, 0, 0, 0, 1], [1.3, -0.0121, -0.9993, -0.0347, 0.4668, -0.29, 0.0367, -0.9563, 0.0984, 0.957, -0.0015, -0.2902, 1.1753, 0, 0, 0, 1], [1.31, -0.012, -0.9993, -0.036, 0.4671, -0.2933, 0.038, -0.9553, 0.0992, 0.956, -0.0009, -0.2935, 1.1754, 0, 0, 0, 1], [1.32, -0.0117, -0.9992, -0.0371, 0.4674, -0.2966, 0.0389, -0.9542, 0.0999, 0.9549, -0.0002, -0.2969, 1.1754, 0, 0, 0, 1], [1.33, -0.0115, -0.9992, -0.0382, 0.4676, -0.3, 0.0399, -0.9531, 0.1007, 0.9539, 0.0005, -0.3002, 1.1754, 0, 0, 0, 1], [1.34, -0.0112, -0.9992, -0.0393, 0.4679, -0.3033, 0.0408, -0.952, 0.1014, 0.9528, 0.0013, -0.3035, 1.1755, 0, 0, 0, 1], [1.35, -0.0108, -0.9991, -0.0404, 0.4681, -0.3067, 0.0417, -0.9509, 0.1022, 0.9518, 0.0021, -0.3069, 1.1755, 0, 0, 0, 1], [1.36, -0.0129, -0.999, -0.0419, 0.4684, -0.3098, 0.0438, -0.9498, 0.103, 0.9507, 0.0007, -0.31, 1.1754, 0, 0, 0, 1], [1.37, -0.0123, -0.999, -0.0429, 0.4687, -0.3131, 0.0446, -0.9487, 0.1037, 0.9496, 0.0018, -0.3133, 1.1755, 0, 0, 0, 1], [1.3800000000000001, -0.0117, -0.999, -0.0439, 0.4689, -0.3165, 0.0454, -0.9475, 0.1044, 0.9485, 0.0028, -0.3167, 1.1755, 0, 0, 0, 1], [1.3900000000000001, -0.0111, -0.9989, -0.0449, 0.4692, -0.3198, 0.0461, -0.9464, 0.1051, 0.9474, 0.0039, -0.32, 1.1756, 0, 0, 0, 1], [1.4000000000000001, -0.0131, -0.9988, -0.0464, 0.4694, -0.3229, 0.0482, -0.9452, 0.1059, 0.9464, 0.0026, -0.3231, 1.1755, 0, 0, 0, 1], [1.4100000000000001, -0.0122, -0.9988, -0.0474, 0.4697, -0.3262, 0.0488, -0.944, 0.1066, 0.9452, 0.0039, -0.3264, 1.1756, 0, 0, 0, 1], [1.42, -0.0114, -0.9988, -0.0484, 0.4699, -0.3296, 0.0494, -0.9428, 0.1072, 0.9441, 0.0052, -0.3297, 1.1757, 0, 0, 0, 1], [1.43, -0.0132, -0.9987, -0.0499, 0.4702, -0.3326, 0.0514, -0.9417, 0.108, 0.943, 0.0041, -0.3328, 1.1756, 0, 0, 0, 1], [1.44, -0.0123, -0.9986, -0.0509, 0.4704, -0.3359, 0.052, -0.9404, 0.1086, 0.9418, 0.0055, -0.3361, 1.1757, 0, 0, 0, 1], [1.45, -0.0116, -0.9986, -0.0518, 0.4706, -0.3393, 0.0527, -0.9392, 0.1092, 0.9406, 0.0067, -0.3394, 1.1757, 0, 0, 0, 1], [1.46, -0.0133, -0.9985, -0.0533, 0.4709, -0.3423, 0.0547, -0.938, 0.1099, 0.9395, 0.0058, -0.3425, 1.1757, 0, 0, 0, 1], [1.47, -0.0125, -0.9984, -0.0543, 0.4711, -0.3456, 0.0553, -0.9368, 0.1105, 0.9383, 0.0071, -0.3457, 1.1757, 0, 0, 0, 1], [1.48, -0.0141, -0.9983, -0.0558, 0.4714, -0.3486, 0.0572, -0.9355, 0.1112, 0.9372, 0.0063, -0.3488, 1.1757, 0, 0, 0, 1], [1.49, -0.0133, -0.9983, -0.0568, 0.4716, -0.3519, 0.0578, -0.9342, 0.1118, 0.9359, 0.0076, -0.3521, 1.1758, 0, 0, 0, 1], [1.5, -0.0126, -0.9982, -0.0578, 0.4718, -0.3552, 0.0585, -0.933, 0.1123, 0.9347, 0.0088, -0.3553, 1.1758, 0, 0, 0, 1], [1.51, -0.014, -0.9981, -0.0593, 0.472, -0.3582, 0.0604, -0.9317, 0.113, 0.9335, 0.0082, -0.3584, 1.1758, 0, 0, 0, 1], [1.52, -0.0133, -0.9981, -0.0603, 0.4722, -0.3615, 0.0611, -0.9304, 0.1135, 0.9323, 0.0095, -0.3616, 1.1759, 0, 0, 0, 1], [1.53, -0.0127, -0.998, -0.0614, 0.4724, -0.3648, 0.0618, -0.929, 0.114, 0.931, 0.0106, -0.3648, 1.1759, 0, 0, 0, 1], [1.54, -0.0139, -0.9979, -0.0629, 0.4726, -0.3678, 0.0636, -0.9277, 0.1146, 0.9298, 0.0102, -0.3679, 1.1759, 0, 0, 0, 1], [1.55, -0.0133, -0.9979, -0.0639, 0.4728, -0.371, 0.0643, -0.9264, 0.1151, 0.9285, 0.0114, -0.3711, 1.176, 0, 0, 0, 1], [1.56, -0.0144, -0.9978, -0.0654, 0.473, -0.374, 0.066, -0.9251, 0.1157, 0.9273, 0.0111, -0.3741, 1.176, 0, 0, 0, 1], [1.57, -0.0138, -0.9977, -0.0665, 0.4731, -0.3772, 0.0668, -0.9237, 0.1162, 0.926, 0.0123, -0.3773, 1.176, 0, 0, 0, 1], [1.58, -0.0133, -0.9976, -0.0676, 0.4733, -0.3805, 0.0676, -0.9223, 0.1166, 0.9247, 0.0135, -0.3805, 1.1761, 0, 0, 0, 1], [1.59, -0.0142, -0.9975, -0.069, 0.4735, -0.3835, 0.0692, -0.921, 0.1172, 0.9235, 0.0134, -0.3835, 1.1761, 0, 0, 0, 1], [1.6, -0.0137, -0.9974, -0.0702, 0.4736, -0.3867, 0.07, -0.9196, 0.1176, 0.9221, 0.0146, -0.3866, 1.1761, 0, 0, 0, 1], [1.61, -0.0145, -0.9973, -0.0716, 0.4738, -0.3896, 0.0716, -0.9182, 0.1181, 0.9209, 0.0146, -0.3896, 1.1761, 0, 0, 0, 1], [1.62, -0.0139, -0.9972, -0.0728, 0.4739, -0.3928, 0.0725, -0.9168, 0.1185, 0.9195, 0.0158, -0.3927, 1.1762, 0, 0, 0, 1], [1.6300000000000001, -0.0147, -0.9971, -0.0743, 0.4741, -0.3958, 0.074, -0.9153, 0.119, 0.9182, 0.016, -0.3957, 1.1762, 0, 0, 0, 1], [1.6400000000000001, -0.0141, -0.997, -0.0755, 0.4742, -0.399, 0.0749, -0.9139, 0.1194, 0.9169, 0.0172, -0.3988, 1.1763, 0, 0, 0, 1], [1.6500000000000001, -0.0147, -0.9969, -0.077, 0.4744, -0.4019, 0.0764, -0.9125, 0.1198, 0.9156, 0.0175, -0.4018, 1.1763, 0, 0, 0, 1], [1.6600000000000001, -0.0142, -0.9968, -0.0783, 0.4745, -0.4051, 0.0773, -0.911, 0.1202, 0.9142, 0.0188, -0.4049, 1.1763, 0, 0, 0, 1], [1.6700000000000002, -0.0146, -0.9967, -0.0797, 0.4746, -0.408, 0.0787, -0.9096, 0.1206, 0.9128, 0.0193, -0.4078, 1.1764, 0, 0, 0, 1], [1.68, -0.0149, -0.9966, -0.0812, 0.4747, -0.411, 0.0801, -0.9081, 0.1209, 0.9115, 0.0198, -0.4108, 1.1764, 0, 0, 0, 1], [1.69, -0.0152, -0.9965, -0.0826, 0.4748, -0.414, 0.0815, -0.9066, 0.1213, 0.9102, 0.0204, -0.4138, 1.1764, 0, 0, 0, 1], [1.7, -0.0147, -0.9964, -0.0841, 0.4749, -0.4171, 0.0825, -0.9051, 0.1217, 0.9088, 0.0218, -0.4167, 1.1765, 0, 0, 0, 1], [1.71, -0.0148, -0.9962, -0.0856, 0.475, -0.42, 0.0839, -0.9036, 0.122, 0.9074, 0.0225, -0.4197, 1.1765, 0, 0, 0, 1], [1.72, -0.0149, -0.9961, -0.087, 0.4751, -0.423, 0.0851, -0.9021, 0.1223, 0.906, 0.0234, -0.4226, 1.1766, 0, 0, 0, 1], [1.73, -0.0149, -0.996, -0.0885, 0.4751, -0.4259, 0.0864, -0.9006, 0.1226, 0.9046, 0.0243, -0.4255, 1.1766, 0, 0, 0, 1], [1.74, -0.0148, -0.9958, -0.0901, 0.4752, -0.4289, 0.0877, -0.8991, 0.1229, 0.9032, 0.0253, -0.4284, 1.1767, 0, 0, 0, 1], [1.75, -0.0147, -0.9957, -0.0916, 0.4753, -0.4318, 0.089, -0.8976, 0.1232, 0.9018, 0.0263, -0.4313, 1.1767, 0, 0, 0, 1], [1.76, -0.0145, -0.9955, -0.0932, 0.4753, -0.4348, 0.0902, -0.896, 0.1235, 0.9004, 0.0275, -0.4341, 1.1768, 0, 0, 0, 1], [1.77, -0.0143, -0.9954, -0.0948, 0.4753, -0.4377, 0.0915, -0.8945, 0.1237, 0.899, 0.0287, -0.437, 1.1768, 0, 0, 0, 1], [1.78, -0.014, -0.9952, -0.0964, 0.4754, -0.4406, 0.0927, -0.8929, 0.124, 0.8976, 0.03, -0.4398, 1.1769, 0, 0, 0, 1], [1.79, -0.0136, -0.9951, -0.0982, 0.4754, -0.4435, 0.094, -0.8913, 0.1242, 0.8962, 0.0314, -0.4426, 1.177, 0, 0, 0, 1], [1.8, -0.0132, -0.9949, -0.0999, 0.4754, -0.4464, 0.0953, -0.8897, 0.1244, 0.8947, 0.0329, -0.4454, 1.177, 0, 0, 0, 1], [1.81, -0.0129, -0.9947, -0.1016, 0.4754, -0.4493, 0.0965, -0.8882, 0.1247, 0.8933, 0.0342, -0.4482, 1.1771, 0, 0, 0, 1], [1.82, -0.0125, -0.9946, -0.1033, 0.4754, -0.4522, 0.0978, -0.8866, 0.1249, 0.8919, 0.0357, -0.4509, 1.1772, 0, 0, 0, 1], [1.83, -0.0122, -0.9944, -0.105, 0.4754, -0.455, 0.099, -0.885, 0.125, 0.8904, 0.0369, -0.4537, 1.1773, 0, 0, 0, 1], [1.84, -0.0118, -0.9942, -0.1067, 0.4754, -0.4578, 0.1003, -0.8834, 0.1252, 0.889, 0.0384, -0.4564, 1.1773, 0, 0, 0, 1], [1.85, -0.0116, -0.994, -0.1083, 0.4754, -0.4606, 0.1015, -0.8818, 0.1254, 0.8875, 0.0396, -0.4591, 1.1774, 0, 0, 0, 1]], material_var_cylinder_id_139963660176464);
+sceneElements.push(var_var_cylinder_id_139963660176464);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963660143888'
+
+const material_var_cylinder_id_139963660143888 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "lime",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963660143888 = new Cylinder(0.004,0.1,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 1.0, -0.0, 0.05, 0.0, 0.0, 1.0, 0.0, 0, 0, 0, 1], [0, 0.9976, -0.0, -0.0698, 0.1024, 0.0, -1.0, 0.0, -0.05, -0.0698, -0.0, -0.9976, 1.6551, 0, 0, 0, 1], [0, 0.9976, -0.0, -0.0698, 0.1024, 0.0, -1.0, 0.0, -0.05, -0.0698, -0.0, -0.9976, 1.6551, 0, 0, 0, 1], [0, -0.95, -0.0419, 0.3094, 0.4858, -0.0902, 0.9855, -0.1436, 0.0128, -0.2989, -0.1643, -0.94, 1.1193, 0, 0, 0, 1], [0.01, -0.951, -0.0413, 0.3064, 0.4862, -0.0881, 0.9861, -0.1407, 0.014, -0.2964, -0.1608, -0.9414, 1.1206, 0, 0, 0, 1], [0.02, -0.952, -0.0407, 0.3035, 0.4867, -0.0861, 0.9867, -0.1378, 0.0153, -0.2938, -0.1573, -0.9428, 1.1218, 0, 0, 0, 1], [0.03, -0.9529, -0.04, 0.3005, 0.4871, -0.084, 0.9873, -0.1348, 0.0166, -0.2913, -0.1537, -0.9442, 1.123, 0, 0, 0, 1], [0.04, -0.9539, -0.0394, 0.2976, 0.4875, -0.082, 0.9879, -0.1319, 0.0178, -0.2888, -0.1502, -0.9455, 1.1242, 0, 0, 0, 1], [0.05, -0.9548, -0.0388, 0.2946, 0.4879, -0.08, 0.9884, -0.1289, 0.019, -0.2862, -0.1466, -0.9469, 1.1254, 0, 0, 0, 1], [0.060000000000000005, -0.9558, -0.0382, 0.2917, 0.4883, -0.078, 0.989, -0.1259, 0.0203, -0.2837, -0.1431, -0.9482, 1.1266, 0, 0, 0, 1], [0.06999999999999999, -0.9567, -0.0376, 0.2887, 0.4886, -0.076, 0.9895, -0.123, 0.0215, -0.2811, -0.1396, -0.9495, 1.1278, 0, 0, 0, 1], [0.08, -0.9576, -0.037, 0.2858, 0.489, -0.074, 0.99, -0.12, 0.0227, -0.2785, -0.1361, -0.9507, 1.129, 0, 0, 0, 1], [0.09, -0.9585, -0.0364, 0.2829, 0.4894, -0.0721, 0.9905, -0.117, 0.0239, -0.2759, -0.1325, -0.952, 1.1301, 0, 0, 0, 1], [0.09999999999999999, -0.9594, -0.0358, 0.2799, 0.4897, -0.0702, 0.991, -0.114, 0.0251, -0.2733, -0.129, -0.9532, 1.1313, 0, 0, 0, 1], [0.11, -0.9602, -0.0352, 0.277, 0.4901, -0.0683, 0.9915, -0.111, 0.0263, -0.2707, -0.1255, -0.9544, 1.1324, 0, 0, 0, 1], [0.12, -0.9611, -0.0346, 0.274, 0.4904, -0.0665, 0.9919, -0.108, 0.0275, -0.2681, -0.122, -0.9556, 1.1335, 0, 0, 0, 1], [0.13, -0.962, -0.034, 0.2711, 0.4907, -0.0646, 0.9924, -0.1049, 0.0287, -0.2654, -0.1185, -0.9568, 1.1346, 0, 0, 0, 1], [0.14, -0.9628, -0.0334, 0.2681, 0.4911, -0.0628, 0.9928, -0.1019, 0.0298, -0.2628, -0.115, -0.958, 1.1357, 0, 0, 0, 1], [0.15000000000000002, -0.9636, -0.0328, 0.2652, 0.4914, -0.061, 0.9932, -0.0989, 0.031, -0.2602, -0.1114, -0.9591, 1.1368, 0, 0, 0, 1], [0.16, -0.9645, -0.0322, 0.2622, 0.4917, -0.0593, 0.9936, -0.0958, 0.0322, -0.2575, -0.1079, -0.9602, 1.1378, 0, 0, 0, 1], [0.17, -0.9653, -0.0317, 0.2593, 0.492, -0.0575, 0.994, -0.0927, 0.0333, -0.2548, -0.1044, -0.9613, 1.1389, 0, 0, 0, 1], [0.18000000000000002, -0.9661, -0.0311, 0.2564, 0.4923, -0.0558, 0.9944, -0.0897, 0.0345, -0.2521, -0.1009, -0.9624, 1.1399, 0, 0, 0, 1], [0.19, -0.9669, -0.0306, 0.2534, 0.4926, -0.0541, 0.9948, -0.0866, 0.0356, -0.2494, -0.0974, -0.9635, 1.141, 0, 0, 0, 1], [0.2, -0.9677, -0.03, 0.2505, 0.4929, -0.0525, 0.9951, -0.0835, 0.0367, -0.2467, -0.0939, -0.9645, 1.142, 0, 0, 0, 1], [0.21000000000000002, -0.9684, -0.0295, 0.2475, 0.4932, -0.0508, 0.9955, -0.0804, 0.0379, -0.244, -0.0904, -0.9655, 1.143, 0, 0, 0, 1], [0.22, -0.9692, -0.029, 0.2446, 0.4934, -0.0492, 0.9958, -0.0773, 0.039, -0.2413, -0.0869, -0.9666, 1.144, 0, 0, 0, 1], [0.23, -0.97, -0.0284, 0.2416, 0.4937, -0.0477, 0.9961, -0.0741, 0.0401, -0.2385, -0.0834, -0.9675, 1.145, 0, 0, 0, 1], [0.24000000000000002, -0.9707, -0.0279, 0.2386, 0.494, -0.0461, 0.9964, -0.071, 0.0412, -0.2358, -0.0799, -0.9685, 1.1459, 0, 0, 0, 1], [0.25, -0.9714, -0.0274, 0.2357, 0.4942, -0.0446, 0.9967, -0.0679, 0.0423, -0.233, -0.0764, -0.9695, 1.1469, 0, 0, 0, 1], [0.26, -0.9722, -0.0269, 0.2327, 0.4945, -0.0431, 0.997, -0.0647, 0.0434, -0.2303, -0.073, -0.9704, 1.1478, 0, 0, 0, 1], [0.27, -0.9729, -0.0265, 0.2297, 0.4947, -0.0417, 0.9972, -0.0616, 0.0445, -0.2275, -0.0695, -0.9713, 1.1488, 0, 0, 0, 1], [0.28, -0.9736, -0.026, 0.2268, 0.495, -0.0402, 0.9975, -0.0584, 0.0456, -0.2247, -0.066, -0.9722, 1.1497, 0, 0, 0, 1], [0.29000000000000004, -0.9743, -0.0256, 0.2238, 0.4952, -0.0389, 0.9977, -0.0552, 0.0467, -0.2219, -0.0625, -0.9731, 1.1506, 0, 0, 0, 1], [0.3, -0.975, -0.0251, 0.2208, 0.4954, -0.0375, 0.9979, -0.052, 0.0478, -0.2191, -0.059, -0.9739, 1.1515, 0, 0, 0, 1], [0.31, -0.9757, -0.0247, 0.2178, 0.4956, -0.0362, 0.9982, -0.0488, 0.0489, -0.2162, -0.0555, -0.9748, 1.1524, 0, 0, 0, 1], [0.32, -0.9763, -0.0243, 0.2149, 0.4958, -0.0349, 0.9983, -0.0456, 0.05, -0.2134, -0.052, -0.9756, 1.1532, 0, 0, 0, 1], [0.33, -0.977, -0.0239, 0.2119, 0.4961, -0.0336, 0.9985, -0.0424, 0.051, -0.2105, -0.0486, -0.9764, 1.1541, 0, 0, 0, 1], [0.34, -0.9777, -0.0235, 0.2089, 0.4963, -0.0324, 0.9987, -0.0392, 0.0521, -0.2077, -0.0451, -0.9772, 1.1549, 0, 0, 0, 1], [0.35000000000000003, -0.9783, -0.0231, 0.2059, 0.4965, -0.0312, 0.9989, -0.036, 0.0532, -0.2048, -0.0416, -0.9779, 1.1558, 0, 0, 0, 1], [0.36000000000000004, -0.9789, -0.0228, 0.2028, 0.4967, -0.03, 0.999, -0.0327, 0.0542, -0.2019, -0.0381, -0.9787, 1.1566, 0, 0, 0, 1], [0.37, -0.9796, -0.0225, 0.1998, 0.4968, -0.0289, 0.9991, -0.0295, 0.0553, -0.199, -0.0346, -0.9794, 1.1574, 0, 0, 0, 1], [0.38, -0.9802, -0.0221, 0.1968, 0.497, -0.0278, 0.9993, -0.0262, 0.0564, -0.1961, -0.0312, -0.9801, 1.1582, 0, 0, 0, 1], [0.39, -0.9808, -0.0218, 0.1938, 0.4972, -0.0268, 0.9994, -0.0229, 0.0574, -0.1931, -0.0277, -0.9808, 1.159, 0, 0, 0, 1], [0.4, -0.9814, -0.0216, 0.1907, 0.4974, -0.0258, 0.9995, -0.0197, 0.0585, -0.1902, -0.0242, -0.9815, 1.1598, 0, 0, 0, 1], [0.41000000000000003, -0.982, -0.0213, 0.1876, 0.4976, -0.0248, 0.9996, -0.0164, 0.0596, -0.1872, -0.0207, -0.9821, 1.1605, 0, 0, 0, 1], [0.42000000000000004, -0.9826, -0.021, 0.1846, 0.4977, -0.0239, 0.9996, -0.0131, 0.0606, -0.1842, -0.0173, -0.9827, 1.1613, 0, 0, 0, 1], [0.43, -0.9832, -0.0208, 0.1815, 0.4979, -0.023, 0.9997, -0.0098, 0.0617, -0.1812, -0.0138, -0.9833, 1.162, 0, 0, 0, 1], [0.44, -0.9837, -0.0206, 0.1784, 0.498, -0.0221, 0.9997, -0.0065, 0.0627, -0.1782, -0.0103, -0.9839, 1.1627, 0, 0, 0, 1], [0.45, -0.9843, -0.0204, 0.1753, 0.4982, -0.0213, 0.9998, -0.0031, 0.0638, -0.1752, -0.0068, -0.9845, 1.1635, 0, 0, 0, 1], [0.46, -0.9849, -0.0203, 0.1721, 0.4983, -0.0205, 0.9998, 0.0002, 0.0648, -0.1721, -0.0033, -0.9851, 1.1642, 0, 0, 0, 1], [0.47000000000000003, -0.9854, -0.0201, 0.169, 0.4985, -0.0198, 0.9998, 0.0035, 0.0659, -0.169, 0.0001, -0.9856, 1.1648, 0, 0, 0, 1], [0.48000000000000004, -0.986, -0.02, 0.1658, 0.4986, -0.0191, 0.9998, 0.0069, 0.0669, -0.1659, 0.0036, -0.9861, 1.1655, 0, 0, 0, 1], [0.49, -0.9865, -0.0199, 0.1626, 0.4988, -0.0185, 0.9998, 0.0102, 0.068, -0.1628, 0.0071, -0.9866, 1.1662, 0, 0, 0, 1], [0.5, -0.987, -0.0198, 0.1594, 0.4989, -0.0179, 0.9997, 0.0136, 0.069, -0.1596, 0.0106, -0.9871, 1.1668, 0, 0, 0, 1], [0.51, -0.9875, -0.0197, 0.1562, 0.4991, -0.0173, 0.9997, 0.017, 0.0701, -0.1564, 0.0141, -0.9876, 1.1675, 0, 0, 0, 1], [0.52, -0.988, -0.0197, 0.1529, 0.4992, -0.0168, 0.9997, 0.0204, 0.0711, -0.1532, 0.0175, -0.988, 1.1681, 0, 0, 0, 1], [0.53, -0.9885, -0.0197, 0.1496, 0.4993, -0.0163, 0.9996, 0.0237, 0.0722, -0.15, 0.021, -0.9885, 1.1687, 0, 0, 0, 1], [0.54, -0.989, -0.0197, 0.1463, 0.4995, -0.0159, 0.9995, 0.0271, 0.0732, -0.1467, 0.0245, -0.9889, 1.1693, 0, 0, 0, 1], [0.55, -0.9895, -0.0197, 0.1429, 0.4996, -0.0155, 0.9994, 0.0305, 0.0743, -0.1434, 0.028, -0.9893, 1.1699, 0, 0, 0, 1], [0.56, -0.99, -0.0198, 0.1395, 0.4997, -0.0152, 0.9993, 0.034, 0.0753, -0.1401, 0.0315, -0.9896, 1.1705, 0, 0, 0, 1], [0.5700000000000001, -0.9905, -0.0198, 0.1361, 0.4998, -0.0149, 0.9992, 0.0374, 0.0764, -0.1367, 0.035, -0.99, 1.171, 0, 0, 0, 1], [0.5800000000000001, -0.991, -0.0199, 0.1326, 0.5, -0.0146, 0.9991, 0.0408, 0.0775, -0.1333, 0.0385, -0.9903, 1.1716, 0, 0, 0, 1], [0.59, -0.9914, -0.02, 0.1291, 0.5001, -0.0144, 0.9989, 0.0443, 0.0785, -0.1299, 0.042, -0.9906, 1.1721, 0, 0, 0, 1], [0.6, -0.9919, -0.0202, 0.1256, 0.5002, -0.0143, 0.9988, 0.0477, 0.0796, -0.1264, 0.0455, -0.9909, 1.1727, 0, 0, 0, 1], [0.61, -0.9923, -0.0203, 0.122, 0.5003, -0.0142, 0.9986, 0.0512, 0.0806, -0.1228, 0.049, -0.9912, 1.1732, 0, 0, 0, 1], [0.62, -0.9928, -0.0205, 0.1183, 0.5005, -0.0141, 0.9984, 0.0546, 0.0817, -0.1192, 0.0525, -0.9915, 1.1737, 0, 0, 0, 1], [0.63, -0.9932, -0.0207, 0.1146, 0.5006, -0.0141, 0.9982, 0.0581, 0.0828, -0.1156, 0.0561, -0.9917, 1.1742, 0, 0, 0, 1], [0.64, -0.9936, -0.0209, 0.1108, 0.5007, -0.0141, 0.998, 0.0616, 0.0838, -0.1118, 0.0596, -0.9919, 1.1747, 0, 0, 0, 1], [0.65, -0.994, -0.0211, 0.1069, 0.5009, -0.0142, 0.9978, 0.065, 0.0849, -0.108, 0.0631, -0.9921, 1.1751, 0, 0, 0, 1], [0.66, -0.9945, -0.0214, 0.1029, 0.501, -0.0144, 0.9975, 0.0685, 0.086, -0.1041, 0.0667, -0.9923, 1.1756, 0, 0, 0, 1], [0.67, -0.9949, -0.0217, 0.0989, 0.5011, -0.0146, 0.9973, 0.072, 0.0871, -0.1002, 0.0702, -0.9925, 1.176, 0, 0, 0, 1], [0.68, -0.9953, -0.0219, 0.0948, 0.5013, -0.0148, 0.997, 0.0756, 0.0881, -0.0961, 0.0738, -0.9926, 1.1765, 0, 0, 0, 1], [0.6900000000000001, -0.9956, -0.0223, 0.0905, 0.5014, -0.0151, 0.9968, 0.0791, 0.0892, -0.092, 0.0774, -0.9928, 1.1769, 0, 0, 0, 1], [0.7000000000000001, -0.996, -0.0226, 0.0862, 0.5015, -0.0154, 0.9965, 0.0826, 0.0903, -0.0877, 0.0809, -0.9929, 1.1773, 0, 0, 0, 1], [0.7100000000000001, -0.9964, -0.0229, 0.0817, 0.5017, -0.0159, 0.9962, 0.0861, 0.0914, -0.0833, 0.0845, -0.9929, 1.1777, 0, 0, 0, 1], [0.72, -0.9968, -0.0233, 0.0771, 0.5018, -0.0163, 0.9958, 0.0897, 0.0925, -0.0788, 0.0881, -0.993, 1.1781, 0, 0, 0, 1], [0.73, -0.9971, -0.0236, 0.0723, 0.502, -0.0168, 0.9955, 0.0933, 0.0936, -0.0742, 0.0918, -0.993, 1.1785, 0, 0, 0, 1], [0.74, -0.9974, -0.0239, 0.0675, 0.5022, -0.0173, 0.9952, 0.0968, 0.0947, -0.0695, 0.0954, -0.993, 1.1788, 0, 0, 0, 1], [0.75, -0.9977, -0.0241, 0.0628, 0.5023, -0.0177, 0.9948, 0.1004, 0.0957, -0.0649, 0.0991, -0.993, 1.1792, 0, 0, 0, 1], [0.76, -0.998, -0.0242, 0.0581, 0.5025, -0.0181, 0.9944, 0.104, 0.0968, -0.0603, 0.1027, -0.9929, 1.1795, 0, 0, 0, 1], [0.77, -0.9983, -0.0243, 0.0535, 0.5027, -0.0184, 0.994, 0.1076, 0.0978, -0.0558, 0.1064, -0.9928, 1.1799, 0, 0, 0, 1], [0.78, -0.9985, -0.0242, 0.0489, 0.5029, -0.0187, 0.9936, 0.1112, 0.0988, -0.0512, 0.1101, -0.9926, 1.1802, 0, 0, 0, 1], [0.79, -0.9987, -0.0241, 0.0443, 0.5031, -0.0189, 0.9932, 0.1148, 0.0998, -0.0468, 0.1138, -0.9924, 1.1805, 0, 0, 0, 1], [0.8, -0.9989, -0.0239, 0.0399, 0.5033, -0.0191, 0.9928, 0.1184, 0.1009, -0.0425, 0.1175, -0.9922, 1.1808, 0, 0, 0, 1], [0.81, -0.9991, -0.0237, 0.0357, 0.5035, -0.0192, 0.9923, 0.122, 0.1018, -0.0383, 0.1212, -0.9919, 1.1811, 0, 0, 0, 1], [0.8200000000000001, -0.9992, -0.0233, 0.0316, 0.5038, -0.0192, 0.9919, 0.1256, 0.1028, -0.0342, 0.1249, -0.9916, 1.1813, 0, 0, 0, 1], [0.8300000000000001, -0.9994, -0.0229, 0.0277, 0.504, -0.0192, 0.9914, 0.1293, 0.1038, -0.0304, 0.1286, -0.9912, 1.1816, 0, 0, 0, 1], [0.8400000000000001, -0.9995, -0.0224, 0.024, 0.5042, -0.0191, 0.9909, 0.1329, 0.1048, -0.0267, 0.1324, -0.9908, 1.1819, 0, 0, 0, 1], [0.85, -0.9995, -0.0219, 0.0205, 0.5044, -0.0189, 0.9905, 0.1365, 0.1058, -0.0233, 0.1361, -0.9904, 1.1821, 0, 0, 0, 1], [0.86, -0.9996, -0.0212, 0.0174, 0.5047, -0.0186, 0.99, 0.1401, 0.1068, -0.0202, 0.1398, -0.99, 1.1823, 0, 0, 0, 1], [0.87, -0.9997, -0.0205, 0.0145, 0.5049, -0.0182, 0.9894, 0.1438, 0.1078, -0.0173, 0.1434, -0.9895, 1.1825, 0, 0, 0, 1], [0.88, -0.9997, -0.0198, 0.012, 0.5051, -0.0178, 0.9889, 0.1474, 0.1088, -0.0148, 0.1471, -0.989, 1.1827, 0, 0, 0, 1], [0.89, -0.9998, -0.019, 0.0097, 0.5054, -0.0173, 0.9884, 0.151, 0.1098, -0.0125, 0.1508, -0.9885, 1.1829, 0, 0, 0, 1], [0.9, -0.9998, -0.0181, 0.0078, 0.5056, -0.0167, 0.9878, 0.1545, 0.1107, -0.0105, 0.1544, -0.988, 1.1831, 0, 0, 0, 1], [0.91, -0.9998, -0.0172, 0.0061, 0.5059, -0.016, 0.9873, 0.1581, 0.1117, -0.0088, 0.158, -0.9874, 1.1833, 0, 0, 0, 1], [0.92, -0.9999, -0.0162, 0.0047, 0.5061, -0.0152, 0.9867, 0.1617, 0.1127, -0.0073, 0.1616, -0.9868, 1.1835, 0, 0, 0, 1], [0.93, -0.9999, -0.0152, 0.0036, 0.5064, -0.0144, 0.9862, 0.1652, 0.1137, -0.0061, 0.1651, -0.9863, 1.1837, 0, 0, 0, 1], [0.9400000000000001, -0.9999, -0.0141, 0.0027, 0.5066, -0.0134, 0.9856, 0.1687, 0.1147, -0.0051, 0.1687, -0.9857, 1.1838, 0, 0, 0, 1], [0.9500000000000001, -0.9999, -0.013, 0.0021, 0.5069, -0.0125, 0.985, 0.1723, 0.1157, -0.0043, 0.1722, -0.985, 1.184, 0, 0, 0, 1], [0.9600000000000001, -0.9999, -0.0119, 0.0016, 0.5072, -0.0114, 0.9844, 0.1758, 0.1166, -0.0036, 0.1757, -0.9844, 1.1842, 0, 0, 0, 1], [0.97, -0.9999, -0.0107, 0.0013, 0.5075, -0.0103, 0.9838, 0.1792, 0.1176, -0.0032, 0.1792, -0.9838, 1.1844, 0, 0, 0, 1], [0.98, -1.0, -0.0095, 0.0012, 0.5078, -0.0092, 0.9831, 0.1827, 0.1185, -0.0029, 0.1827, -0.9832, 1.1845, 0, 0, 0, 1], [0.99, -1.0, -0.0083, 0.0012, 0.5081, -0.0079, 0.9825, 0.1862, 0.1195, -0.0027, 0.1861, -0.9825, 1.1847, 0, 0, 0, 1], [1.0, -1.0, -0.0071, 0.0013, 0.5084, -0.0067, 0.9818, 0.1896, 0.1204, -0.0026, 0.1896, -0.9819, 1.1849, 0, 0, 0, 1], [1.01, -1.0, -0.0058, 0.0016, 0.5087, -0.0054, 0.9812, 0.193, 0.1214, -0.0027, 0.193, -0.9812, 1.1851, 0, 0, 0, 1], [1.02, -1.0, -0.0045, 0.0019, 0.509, -0.004, 0.9805, 0.1964, 0.1223, -0.0028, 0.1964, -0.9805, 1.1852, 0, 0, 0, 1], [1.03, -1.0, -0.0031, 0.0024, 0.5093, -0.0026, 0.9798, 0.1998, 0.1232, -0.0029, 0.1998, -0.9798, 1.1854, 0, 0, 0, 1], [1.04, -1.0, -0.0017, 0.0029, 0.5096, -0.0011, 0.9791, 0.2032, 0.1241, -0.0032, 0.2032, -0.9791, 1.1856, 0, 0, 0, 1], [1.05, -1.0, -0.0004, 0.0035, 0.51, 0.0004, 0.9784, 0.2066, 0.125, -0.0035, 0.2066, -0.9784, 1.1857, 0, 0, 0, 1], [1.06, -1.0, 0.0011, 0.0041, 0.5103, 0.0019, 0.9777, 0.21, 0.1259, -0.0038, 0.21, -0.9777, 1.1859, 0, 0, 0, 1], [1.07, -1.0, 0.0025, 0.0048, 0.5107, 0.0035, 0.977, 0.2133, 0.1268, -0.0042, 0.2133, -0.977, 1.1861, 0, 0, 0, 1], [1.08, -1.0, 0.004, 0.0056, 0.511, 0.0051, 0.9762, 0.2167, 0.1276, -0.0046, 0.2167, -0.9762, 1.1862, 0, 0, 0, 1], [1.09, -1.0, 0.0055, 0.0064, 0.5114, 0.0067, 0.9755, 0.22, 0.1285, -0.005, 0.2201, -0.9755, 1.1864, 0, 0, 0, 1], [1.1, -1.0, 0.0069, 0.0071, 0.5117, 0.0084, 0.9747, 0.2234, 0.1294, -0.0053, 0.2234, -0.9747, 1.1866, 0, 0, 0, 1], [1.11, -0.9999, 0.0084, 0.0077, 0.5121, 0.01, 0.9739, 0.2267, 0.1302, -0.0056, 0.2268, -0.9739, 1.1867, 0, 0, 0, 1], [1.12, -0.9999, 0.0099, 0.0084, 0.5124, 0.0116, 0.9731, 0.23, 0.131, -0.0059, 0.2301, -0.9731, 1.1869, 0, 0, 0, 1], [1.1300000000000001, -0.9999, 0.0114, 0.0089, 0.5128, 0.0131, 0.9723, 0.2334, 0.1318, -0.006, 0.2335, -0.9723, 1.1871, 0, 0, 0, 1], [1.1400000000000001, -0.9999, 0.0128, 0.0094, 0.5132, 0.0147, 0.9715, 0.2367, 0.1326, -0.0061, 0.2368, -0.9715, 1.1872, 0, 0, 0, 1], [1.1500000000000001, -0.9998, 0.0142, 0.0099, 0.5135, 0.0162, 0.9706, 0.24, 0.1334, -0.0062, 0.2402, -0.9707, 1.1874, 0, 0, 0, 1], [1.1600000000000001, -0.9998, 0.0157, 0.0103, 0.5138, 0.0177, 0.9698, 0.2434, 0.1342, -0.0062, 0.2435, -0.9699, 1.1876, 0, 0, 0, 1], [1.17, -0.9998, 0.0171, 0.0107, 0.5142, 0.0192, 0.9689, 0.2467, 0.135, -0.0061, 0.2469, -0.969, 1.1877, 0, 0, 0, 1], [1.18, -0.9998, 0.0185, 0.011, 0.5145, 0.0207, 0.968, 0.2501, 0.1358, -0.006, 0.2502, -0.9682, 1.1879, 0, 0, 0, 1], [1.19, -0.9997, 0.0199, 0.0113, 0.5149, 0.0221, 0.9671, 0.2534, 0.1365, -0.0059, 0.2536, -0.9673, 1.1881, 0, 0, 0, 1], [1.2, -0.9997, 0.0213, 0.0115, 0.5152, 0.0235, 0.9662, 0.2567, 0.1373, -0.0057, 0.2569, -0.9664, 1.1882, 0, 0, 0, 1], [1.21, -0.9997, 0.0227, 0.0118, 0.5156, 0.025, 0.9653, 0.2601, 0.138, -0.0055, 0.2603, -0.9655, 1.1884, 0, 0, 0, 1], [1.22, -0.9996, 0.0241, 0.0119, 0.5159, 0.0263, 0.9643, 0.2634, 0.1388, -0.0052, 0.2636, -0.9646, 1.1886, 0, 0, 0, 1], [1.23, -0.9996, 0.0254, 0.0121, 0.5162, 0.0277, 0.9634, 0.2667, 0.1395, -0.0049, 0.2669, -0.9637, 1.1887, 0, 0, 0, 1], [1.24, -0.9996, 0.0268, 0.0122, 0.5166, 0.0291, 0.9624, 0.27, 0.1402, -0.0045, 0.2703, -0.9628, 1.1889, 0, 0, 0, 1], [1.25, -0.9995, 0.0281, 0.0123, 0.5169, 0.0304, 0.9614, 0.2734, 0.1409, -0.0041, 0.2736, -0.9618, 1.1891, 0, 0, 0, 1], [1.26, -0.9995, 0.0295, 0.0123, 0.5172, 0.0317, 0.9604, 0.2767, 0.1416, -0.0037, 0.2769, -0.9609, 1.1892, 0, 0, 0, 1], [1.27, -0.9995, 0.0308, 0.0123, 0.5176, 0.033, 0.9594, 0.28, 0.1423, -0.0032, 0.2803, -0.9599, 1.1894, 0, 0, 0, 1], [1.28, -0.9994, 0.0321, 0.0123, 0.5179, 0.0343, 0.9584, 0.2833, 0.143, -0.0027, 0.2836, -0.9589, 1.1896, 0, 0, 0, 1], [1.29, -0.9994, 0.0334, 0.0122, 0.5182, 0.0355, 0.9574, 0.2867, 0.1437, -0.0021, 0.2869, -0.958, 1.1897, 0, 0, 0, 1], [1.3, -0.9993, 0.0347, 0.0121, 0.5185, 0.0367, 0.9563, 0.29, 0.1444, -0.0015, 0.2902, -0.957, 1.1899, 0, 0, 0, 1], [1.31, -0.9993, 0.036, 0.012, 0.5189, 0.038, 0.9553, 0.2933, 0.1451, -0.0009, 0.2935, -0.956, 1.1901, 0, 0, 0, 1], [1.32, -0.9992, 0.0371, 0.0117, 0.5192, 0.0389, 0.9542, 0.2966, 0.1457, -0.0002, 0.2969, -0.9549, 1.1902, 0, 0, 0, 1], [1.33, -0.9992, 0.0382, 0.0115, 0.5195, 0.0399, 0.9531, 0.3, 0.1464, 0.0005, 0.3002, -0.9539, 1.1904, 0, 0, 0, 1], [1.34, -0.9992, 0.0393, 0.0112, 0.5198, 0.0408, 0.952, 0.3033, 0.147, 0.0013, 0.3035, -0.9528, 1.1906, 0, 0, 0, 1], [1.35, -0.9991, 0.0404, 0.0108, 0.5201, 0.0417, 0.9509, 0.3067, 0.1476, 0.0021, 0.3069, -0.9518, 1.1907, 0, 0, 0, 1], [1.36, -0.999, 0.0419, 0.0129, 0.5205, 0.0438, 0.9498, 0.3098, 0.1483, 0.0007, 0.31, -0.9507, 1.1909, 0, 0, 0, 1], [1.37, -0.999, 0.0429, 0.0123, 0.5208, 0.0446, 0.9487, 0.3131, 0.1489, 0.0018, 0.3133, -0.9496, 1.1911, 0, 0, 0, 1], [1.3800000000000001, -0.999, 0.0439, 0.0117, 0.5211, 0.0454, 0.9475, 0.3165, 0.1495, 0.0028, 0.3167, -0.9485, 1.1912, 0, 0, 0, 1], [1.3900000000000001, -0.9989, 0.0449, 0.0111, 0.5213, 0.0461, 0.9464, 0.3198, 0.1501, 0.0039, 0.32, -0.9474, 1.1914, 0, 0, 0, 1], [1.4000000000000001, -0.9988, 0.0464, 0.0131, 0.5217, 0.0482, 0.9452, 0.3229, 0.1507, 0.0026, 0.3231, -0.9464, 1.1916, 0, 0, 0, 1], [1.4100000000000001, -0.9988, 0.0474, 0.0122, 0.522, 0.0488, 0.944, 0.3262, 0.1513, 0.0039, 0.3264, -0.9452, 1.1917, 0, 0, 0, 1], [1.42, -0.9988, 0.0484, 0.0114, 0.5223, 0.0494, 0.9428, 0.3296, 0.1519, 0.0052, 0.3297, -0.9441, 1.1919, 0, 0, 0, 1], [1.43, -0.9987, 0.0499, 0.0132, 0.5226, 0.0514, 0.9417, 0.3326, 0.1525, 0.0041, 0.3328, -0.943, 1.192, 0, 0, 0, 1], [1.44, -0.9986, 0.0509, 0.0123, 0.5229, 0.052, 0.9404, 0.3359, 0.153, 0.0055, 0.3361, -0.9418, 1.1922, 0, 0, 0, 1], [1.45, -0.9986, 0.0518, 0.0116, 0.5232, 0.0527, 0.9392, 0.3393, 0.1536, 0.0067, 0.3394, -0.9406, 1.1924, 0, 0, 0, 1], [1.46, -0.9985, 0.0533, 0.0133, 0.5235, 0.0547, 0.938, 0.3423, 0.1541, 0.0058, 0.3425, -0.9395, 1.1925, 0, 0, 0, 1], [1.47, -0.9984, 0.0543, 0.0125, 0.5238, 0.0553, 0.9368, 0.3456, 0.1546, 0.0071, 0.3457, -0.9383, 1.1927, 0, 0, 0, 1], [1.48, -0.9983, 0.0558, 0.0141, 0.5241, 0.0572, 0.9355, 0.3486, 0.1551, 0.0063, 0.3488, -0.9372, 1.1929, 0, 0, 0, 1], [1.49, -0.9983, 0.0568, 0.0133, 0.5243, 0.0578, 0.9342, 0.3519, 0.1556, 0.0076, 0.3521, -0.9359, 1.193, 0, 0, 0, 1], [1.5, -0.9982, 0.0578, 0.0126, 0.5246, 0.0585, 0.933, 0.3552, 0.1561, 0.0088, 0.3553, -0.9347, 1.1932, 0, 0, 0, 1], [1.51, -0.9981, 0.0593, 0.014, 0.5249, 0.0604, 0.9317, 0.3582, 0.1565, 0.0082, 0.3584, -0.9335, 1.1933, 0, 0, 0, 1], [1.52, -0.9981, 0.0603, 0.0133, 0.5251, 0.0611, 0.9304, 0.3615, 0.157, 0.0095, 0.3616, -0.9323, 1.1935, 0, 0, 0, 1], [1.53, -0.998, 0.0614, 0.0127, 0.5254, 0.0618, 0.929, 0.3648, 0.1574, 0.0106, 0.3648, -0.931, 1.1936, 0, 0, 0, 1], [1.54, -0.9979, 0.0629, 0.0139, 0.5256, 0.0636, 0.9277, 0.3678, 0.1578, 0.0102, 0.3679, -0.9298, 1.1938, 0, 0, 0, 1], [1.55, -0.9979, 0.0639, 0.0133, 0.5259, 0.0643, 0.9264, 0.371, 0.1582, 0.0114, 0.3711, -0.9285, 1.1939, 0, 0, 0, 1], [1.56, -0.9978, 0.0654, 0.0144, 0.5261, 0.066, 0.9251, 0.374, 0.1586, 0.0111, 0.3741, -0.9273, 1.1941, 0, 0, 0, 1], [1.57, -0.9977, 0.0665, 0.0138, 0.5264, 0.0668, 0.9237, 0.3772, 0.159, 0.0123, 0.3773, -0.926, 1.1943, 0, 0, 0, 1], [1.58, -0.9976, 0.0676, 0.0133, 0.5266, 0.0676, 0.9223, 0.3805, 0.1594, 0.0135, 0.3805, -0.9247, 1.1944, 0, 0, 0, 1], [1.59, -0.9975, 0.069, 0.0142, 0.5268, 0.0692, 0.921, 0.3835, 0.1597, 0.0134, 0.3835, -0.9235, 1.1946, 0, 0, 0, 1], [1.6, -0.9974, 0.0702, 0.0137, 0.527, 0.07, 0.9196, 0.3867, 0.1601, 0.0146, 0.3866, -0.9221, 1.1947, 0, 0, 0, 1], [1.61, -0.9973, 0.0716, 0.0145, 0.5273, 0.0716, 0.9182, 0.3896, 0.1604, 0.0146, 0.3896, -0.9209, 1.1949, 0, 0, 0, 1], [1.62, -0.9972, 0.0728, 0.0139, 0.5274, 0.0725, 0.9168, 0.3928, 0.1607, 0.0158, 0.3927, -0.9195, 1.195, 0, 0, 0, 1], [1.6300000000000001, -0.9971, 0.0743, 0.0147, 0.5277, 0.074, 0.9153, 0.3958, 0.161, 0.016, 0.3957, -0.9182, 1.1952, 0, 0, 0, 1], [1.6400000000000001, -0.997, 0.0755, 0.0141, 0.5279, 0.0749, 0.9139, 0.399, 0.1613, 0.0172, 0.3988, -0.9169, 1.1953, 0, 0, 0, 1], [1.6500000000000001, -0.9969, 0.077, 0.0147, 0.5281, 0.0764, 0.9125, 0.4019, 0.1616, 0.0175, 0.4018, -0.9156, 1.1955, 0, 0, 0, 1], [1.6600000000000001, -0.9968, 0.0783, 0.0142, 0.5282, 0.0773, 0.911, 0.4051, 0.1619, 0.0188, 0.4049, -0.9142, 1.1956, 0, 0, 0, 1], [1.6700000000000002, -0.9967, 0.0797, 0.0146, 0.5284, 0.0787, 0.9096, 0.408, 0.1621, 0.0193, 0.4078, -0.9128, 1.1958, 0, 0, 0, 1], [1.68, -0.9966, 0.0812, 0.0149, 0.5286, 0.0801, 0.9081, 0.411, 0.1623, 0.0198, 0.4108, -0.9115, 1.1959, 0, 0, 0, 1], [1.69, -0.9965, 0.0826, 0.0152, 0.5288, 0.0815, 0.9066, 0.414, 0.1626, 0.0204, 0.4138, -0.9102, 1.1961, 0, 0, 0, 1], [1.7, -0.9964, 0.0841, 0.0147, 0.5289, 0.0825, 0.9051, 0.4171, 0.1628, 0.0218, 0.4167, -0.9088, 1.1962, 0, 0, 0, 1], [1.71, -0.9962, 0.0856, 0.0148, 0.5291, 0.0839, 0.9036, 0.42, 0.163, 0.0225, 0.4197, -0.9074, 1.1964, 0, 0, 0, 1], [1.72, -0.9961, 0.087, 0.0149, 0.5292, 0.0851, 0.9021, 0.423, 0.1632, 0.0234, 0.4226, -0.906, 1.1965, 0, 0, 0, 1], [1.73, -0.996, 0.0885, 0.0149, 0.5294, 0.0864, 0.9006, 0.4259, 0.1633, 0.0243, 0.4255, -0.9046, 1.1967, 0, 0, 0, 1], [1.74, -0.9958, 0.0901, 0.0148, 0.5295, 0.0877, 0.8991, 0.4289, 0.1635, 0.0253, 0.4284, -0.9032, 1.1968, 0, 0, 0, 1], [1.75, -0.9957, 0.0916, 0.0147, 0.5296, 0.089, 0.8976, 0.4318, 0.1636, 0.0263, 0.4313, -0.9018, 1.197, 0, 0, 0, 1], [1.76, -0.9955, 0.0932, 0.0145, 0.5297, 0.0902, 0.896, 0.4348, 0.1638, 0.0275, 0.4341, -0.9004, 1.1971, 0, 0, 0, 1], [1.77, -0.9954, 0.0948, 0.0143, 0.5298, 0.0915, 0.8945, 0.4377, 0.1639, 0.0287, 0.437, -0.899, 1.1973, 0, 0, 0, 1], [1.78, -0.9952, 0.0964, 0.014, 0.5299, 0.0927, 0.8929, 0.4406, 0.164, 0.03, 0.4398, -0.8976, 1.1974, 0, 0, 0, 1], [1.79, -0.9951, 0.0982, 0.0136, 0.53, 0.094, 0.8913, 0.4435, 0.1641, 0.0314, 0.4426, -0.8962, 1.1975, 0, 0, 0, 1], [1.8, -0.9949, 0.0999, 0.0132, 0.5301, 0.0953, 0.8897, 0.4464, 0.1642, 0.0329, 0.4454, -0.8947, 1.1977, 0, 0, 0, 1], [1.81, -0.9947, 0.1016, 0.0129, 0.5302, 0.0965, 0.8882, 0.4493, 0.1642, 0.0342, 0.4482, -0.8933, 1.1978, 0, 0, 0, 1], [1.82, -0.9946, 0.1033, 0.0125, 0.5303, 0.0978, 0.8866, 0.4522, 0.1643, 0.0357, 0.4509, -0.8919, 1.1979, 0, 0, 0, 1], [1.83, -0.9944, 0.105, 0.0122, 0.5304, 0.099, 0.885, 0.455, 0.1643, 0.0369, 0.4537, -0.8904, 1.1981, 0, 0, 0, 1], [1.84, -0.9942, 0.1067, 0.0118, 0.5305, 0.1003, 0.8834, 0.4578, 0.1644, 0.0384, 0.4564, -0.889, 1.1982, 0, 0, 0, 1], [1.85, -0.994, 0.1083, 0.0116, 0.5305, 0.1015, 0.8818, 0.4606, 0.1644, 0.0396, 0.4591, -0.8875, 1.1984, 0, 0, 0, 1]], material_var_cylinder_id_139963660143888);
+sceneElements.push(var_var_cylinder_id_139963660143888);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963659994704'
+
+const material_var_cylinder_id_139963659994704 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "blue",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963659994704 = new Cylinder(0.004,0.1,[[0, 1.0, 0.0, -0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, -0.0, 0.05, 0, 0, 0, 1], [0, 0.9976, -0.0698, 0.0, 0.0989, 0.0, 0.0, 1.0, 0.0, -0.0698, -0.9976, 0.0, 1.6052, 0, 0, 0, 1], [0, 0.9976, -0.0698, 0.0, 0.0989, 0.0, 0.0, 1.0, 0.0, -0.0698, -0.9976, 0.0, 1.6052, 0, 0, 0, 1], [0, -0.95, 0.3094, 0.0419, 0.5034, -0.0902, -0.1436, -0.9855, -0.0437, -0.2989, -0.94, 0.1643, 1.0805, 0, 0, 0, 1], [0.01, -0.951, 0.3064, 0.0413, 0.5036, -0.0881, -0.1407, -0.9861, -0.0423, -0.2964, -0.9414, 0.1608, 1.0815, 0, 0, 0, 1], [0.02, -0.952, 0.3035, 0.0407, 0.5039, -0.0861, -0.1378, -0.9867, -0.0409, -0.2938, -0.9428, 0.1573, 1.0825, 0, 0, 0, 1], [0.03, -0.9529, 0.3005, 0.04, 0.5041, -0.084, -0.1348, -0.9873, -0.0395, -0.2913, -0.9442, 0.1537, 1.0835, 0, 0, 0, 1], [0.04, -0.9539, 0.2976, 0.0394, 0.5043, -0.082, -0.1319, -0.9879, -0.0382, -0.2888, -0.9455, 0.1502, 1.0845, 0, 0, 0, 1], [0.05, -0.9548, 0.2946, 0.0388, 0.5045, -0.08, -0.1289, -0.9884, -0.0368, -0.2862, -0.9469, 0.1466, 1.0854, 0, 0, 0, 1], [0.060000000000000005, -0.9558, 0.2917, 0.0382, 0.5047, -0.078, -0.1259, -0.989, -0.0355, -0.2837, -0.9482, 0.1431, 1.0864, 0, 0, 0, 1], [0.06999999999999999, -0.9567, 0.2887, 0.0376, 0.5049, -0.076, -0.123, -0.9895, -0.0341, -0.2811, -0.9495, 0.1396, 1.0873, 0, 0, 0, 1], [0.08, -0.9576, 0.2858, 0.037, 0.5051, -0.074, -0.12, -0.99, -0.0328, -0.2785, -0.9507, 0.1361, 1.0882, 0, 0, 0, 1], [0.09, -0.9585, 0.2829, 0.0364, 0.5053, -0.0721, -0.117, -0.9905, -0.0315, -0.2759, -0.952, 0.1325, 1.0891, 0, 0, 0, 1], [0.09999999999999999, -0.9594, 0.2799, 0.0358, 0.5055, -0.0702, -0.114, -0.991, -0.0301, -0.2733, -0.9532, 0.129, 1.09, 0, 0, 0, 1], [0.11, -0.9602, 0.277, 0.0352, 0.5057, -0.0683, -0.111, -0.9915, -0.0288, -0.2707, -0.9544, 0.1255, 1.0909, 0, 0, 0, 1], [0.12, -0.9611, 0.274, 0.0346, 0.5058, -0.0665, -0.108, -0.9919, -0.0275, -0.2681, -0.9556, 0.122, 1.0918, 0, 0, 0, 1], [0.13, -0.962, 0.2711, 0.034, 0.506, -0.0646, -0.1049, -0.9924, -0.0262, -0.2654, -0.9568, 0.1185, 1.0927, 0, 0, 0, 1], [0.14, -0.9628, 0.2681, 0.0334, 0.5061, -0.0628, -0.1019, -0.9928, -0.0249, -0.2628, -0.958, 0.115, 1.0935, 0, 0, 0, 1], [0.15000000000000002, -0.9636, 0.2652, 0.0328, 0.5063, -0.061, -0.0989, -0.9932, -0.0236, -0.2602, -0.9591, 0.1114, 1.0944, 0, 0, 0, 1], [0.16, -0.9645, 0.2622, 0.0322, 0.5064, -0.0593, -0.0958, -0.9936, -0.0223, -0.2575, -0.9602, 0.1079, 1.0952, 0, 0, 0, 1], [0.17, -0.9653, 0.2593, 0.0317, 0.5066, -0.0575, -0.0927, -0.994, -0.021, -0.2548, -0.9613, 0.1044, 1.096, 0, 0, 0, 1], [0.18000000000000002, -0.9661, 0.2564, 0.0311, 0.5067, -0.0558, -0.0897, -0.9944, -0.0197, -0.2521, -0.9624, 0.1009, 1.0969, 0, 0, 0, 1], [0.19, -0.9669, 0.2534, 0.0306, 0.5068, -0.0541, -0.0866, -0.9948, -0.0185, -0.2494, -0.9635, 0.0974, 1.0977, 0, 0, 0, 1], [0.2, -0.9677, 0.2505, 0.03, 0.5069, -0.0525, -0.0835, -0.9951, -0.0172, -0.2467, -0.9645, 0.0939, 1.0985, 0, 0, 0, 1], [0.21000000000000002, -0.9684, 0.2475, 0.0295, 0.507, -0.0508, -0.0804, -0.9955, -0.0159, -0.244, -0.9655, 0.0904, 1.0992, 0, 0, 0, 1], [0.22, -0.9692, 0.2446, 0.029, 0.5071, -0.0492, -0.0773, -0.9958, -0.0147, -0.2413, -0.9666, 0.0869, 1.1, 0, 0, 0, 1], [0.23, -0.97, 0.2416, 0.0284, 0.5072, -0.0477, -0.0741, -0.9961, -0.0134, -0.2385, -0.9675, 0.0834, 1.1008, 0, 0, 0, 1], [0.24000000000000002, -0.9707, 0.2386, 0.0279, 0.5073, -0.0461, -0.071, -0.9964, -0.0122, -0.2358, -0.9685, 0.0799, 1.1015, 0, 0, 0, 1], [0.25, -0.9714, 0.2357, 0.0274, 0.5074, -0.0446, -0.0679, -0.9967, -0.0109, -0.233, -0.9695, 0.0764, 1.1022, 0, 0, 0, 1], [0.26, -0.9722, 0.2327, 0.0269, 0.5075, -0.0431, -0.0647, -0.997, -0.0097, -0.2303, -0.9704, 0.073, 1.103, 0, 0, 0, 1], [0.27, -0.9729, 0.2297, 0.0265, 0.5075, -0.0417, -0.0616, -0.9972, -0.0084, -0.2275, -0.9713, 0.0695, 1.1037, 0, 0, 0, 1], [0.28, -0.9736, 0.2268, 0.026, 0.5076, -0.0402, -0.0584, -0.9975, -0.0072, -0.2247, -0.9722, 0.066, 1.1044, 0, 0, 0, 1], [0.29000000000000004, -0.9743, 0.2238, 0.0256, 0.5077, -0.0389, -0.0552, -0.9977, -0.0059, -0.2219, -0.9731, 0.0625, 1.1051, 0, 0, 0, 1], [0.3, -0.975, 0.2208, 0.0251, 0.5077, -0.0375, -0.052, -0.9979, -0.0047, -0.2191, -0.9739, 0.059, 1.1057, 0, 0, 0, 1], [0.31, -0.9757, 0.2178, 0.0247, 0.5078, -0.0362, -0.0488, -0.9982, -0.0035, -0.2162, -0.9748, 0.0555, 1.1064, 0, 0, 0, 1], [0.32, -0.9763, 0.2149, 0.0243, 0.5078, -0.0349, -0.0456, -0.9983, -0.0022, -0.2134, -0.9756, 0.052, 1.1071, 0, 0, 0, 1], [0.33, -0.977, 0.2119, 0.0239, 0.5078, -0.0336, -0.0424, -0.9985, -0.001, -0.2105, -0.9764, 0.0486, 1.1077, 0, 0, 0, 1], [0.34, -0.9777, 0.2089, 0.0235, 0.5079, -0.0324, -0.0392, -0.9987, 0.0002, -0.2077, -0.9772, 0.0451, 1.1083, 0, 0, 0, 1], [0.35000000000000003, -0.9783, 0.2059, 0.0231, 0.5079, -0.0312, -0.036, -0.9989, 0.0014, -0.2048, -0.9779, 0.0416, 1.109, 0, 0, 0, 1], [0.36000000000000004, -0.9789, 0.2028, 0.0228, 0.5079, -0.03, -0.0327, -0.999, 0.0027, -0.2019, -0.9787, 0.0381, 1.1096, 0, 0, 0, 1], [0.37, -0.9796, 0.1998, 0.0225, 0.508, -0.0289, -0.0295, -0.9991, 0.0039, -0.199, -0.9794, 0.0346, 1.1102, 0, 0, 0, 1], [0.38, -0.9802, 0.1968, 0.0221, 0.508, -0.0278, -0.0262, -0.9993, 0.0051, -0.1961, -0.9801, 0.0312, 1.1108, 0, 0, 0, 1], [0.39, -0.9808, 0.1938, 0.0218, 0.508, -0.0268, -0.0229, -0.9994, 0.0063, -0.1931, -0.9808, 0.0277, 1.1113, 0, 0, 0, 1], [0.4, -0.9814, 0.1907, 0.0216, 0.508, -0.0258, -0.0197, -0.9995, 0.0075, -0.1902, -0.9815, 0.0242, 1.1119, 0, 0, 0, 1], [0.41000000000000003, -0.982, 0.1876, 0.0213, 0.508, -0.0248, -0.0164, -0.9996, 0.0088, -0.1872, -0.9821, 0.0207, 1.1125, 0, 0, 0, 1], [0.42000000000000004, -0.9826, 0.1846, 0.021, 0.508, -0.0239, -0.0131, -0.9996, 0.01, -0.1842, -0.9827, 0.0173, 1.113, 0, 0, 0, 1], [0.43, -0.9832, 0.1815, 0.0208, 0.508, -0.023, -0.0098, -0.9997, 0.0112, -0.1812, -0.9833, 0.0138, 1.1135, 0, 0, 0, 1], [0.44, -0.9837, 0.1784, 0.0206, 0.508, -0.0221, -0.0065, -0.9997, 0.0124, -0.1782, -0.9839, 0.0103, 1.1141, 0, 0, 0, 1], [0.45, -0.9843, 0.1753, 0.0204, 0.508, -0.0213, -0.0031, -0.9998, 0.0136, -0.1752, -0.9845, 0.0068, 1.1146, 0, 0, 0, 1], [0.46, -0.9849, 0.1721, 0.0203, 0.508, -0.0205, 0.0002, -0.9998, 0.0148, -0.1721, -0.9851, 0.0033, 1.1151, 0, 0, 0, 1], [0.47000000000000003, -0.9854, 0.169, 0.0201, 0.508, -0.0198, 0.0035, -0.9998, 0.0161, -0.169, -0.9856, -0.0001, 1.1156, 0, 0, 0, 1], [0.48000000000000004, -0.986, 0.1658, 0.02, 0.5079, -0.0191, 0.0069, -0.9998, 0.0173, -0.1659, -0.9861, -0.0036, 1.116, 0, 0, 0, 1], [0.49, -0.9865, 0.1626, 0.0199, 0.5079, -0.0185, 0.0102, -0.9998, 0.0185, -0.1628, -0.9866, -0.0071, 1.1165, 0, 0, 0, 1], [0.5, -0.987, 0.1594, 0.0198, 0.5079, -0.0179, 0.0136, -0.9997, 0.0197, -0.1596, -0.9871, -0.0106, 1.1169, 0, 0, 0, 1], [0.51, -0.9875, 0.1562, 0.0197, 0.5079, -0.0173, 0.017, -0.9997, 0.0209, -0.1564, -0.9876, -0.0141, 1.1174, 0, 0, 0, 1], [0.52, -0.988, 0.1529, 0.0197, 0.5078, -0.0168, 0.0204, -0.9997, 0.0222, -0.1532, -0.988, -0.0175, 1.1178, 0, 0, 0, 1], [0.53, -0.9885, 0.1496, 0.0197, 0.5078, -0.0163, 0.0237, -0.9996, 0.0234, -0.15, -0.9885, -0.021, 1.1182, 0, 0, 0, 1], [0.54, -0.989, 0.1463, 0.0197, 0.5078, -0.0159, 0.0271, -0.9995, 0.0246, -0.1467, -0.9889, -0.0245, 1.1186, 0, 0, 0, 1], [0.55, -0.9895, 0.1429, 0.0197, 0.5077, -0.0155, 0.0305, -0.9994, 0.0258, -0.1434, -0.9893, -0.028, 1.119, 0, 0, 0, 1], [0.56, -0.99, 0.1395, 0.0198, 0.5077, -0.0152, 0.034, -0.9993, 0.0271, -0.1401, -0.9896, -0.0315, 1.1194, 0, 0, 0, 1], [0.5700000000000001, -0.9905, 0.1361, 0.0198, 0.5076, -0.0149, 0.0374, -0.9992, 0.0283, -0.1367, -0.99, -0.035, 1.1198, 0, 0, 0, 1], [0.5800000000000001, -0.991, 0.1326, 0.0199, 0.5076, -0.0146, 0.0408, -0.9991, 0.0295, -0.1333, -0.9903, -0.0385, 1.1202, 0, 0, 0, 1], [0.59, -0.9914, 0.1291, 0.02, 0.5076, -0.0144, 0.0443, -0.9989, 0.0308, -0.1299, -0.9906, -0.042, 1.1205, 0, 0, 0, 1], [0.6, -0.9919, 0.1256, 0.0202, 0.5075, -0.0143, 0.0477, -0.9988, 0.032, -0.1264, -0.9909, -0.0455, 1.1209, 0, 0, 0, 1], [0.61, -0.9923, 0.122, 0.0203, 0.5075, -0.0142, 0.0512, -0.9986, 0.0333, -0.1228, -0.9912, -0.049, 1.1212, 0, 0, 0, 1], [0.62, -0.9928, 0.1183, 0.0205, 0.5074, -0.0141, 0.0546, -0.9984, 0.0345, -0.1192, -0.9915, -0.0525, 1.1215, 0, 0, 0, 1], [0.63, -0.9932, 0.1146, 0.0207, 0.5074, -0.0141, 0.0581, -0.9982, 0.0358, -0.1156, -0.9917, -0.0561, 1.1218, 0, 0, 0, 1], [0.64, -0.9936, 0.1108, 0.0209, 0.5073, -0.0141, 0.0616, -0.998, 0.037, -0.1118, -0.9919, -0.0596, 1.1221, 0, 0, 0, 1], [0.65, -0.994, 0.1069, 0.0211, 0.5073, -0.0142, 0.065, -0.9978, 0.0383, -0.108, -0.9921, -0.0631, 1.1224, 0, 0, 0, 1], [0.66, -0.9945, 0.1029, 0.0214, 0.5072, -0.0144, 0.0685, -0.9975, 0.0395, -0.1041, -0.9923, -0.0667, 1.1226, 0, 0, 0, 1], [0.67, -0.9949, 0.0989, 0.0217, 0.5071, -0.0146, 0.072, -0.9973, 0.0408, -0.1002, -0.9925, -0.0702, 1.1229, 0, 0, 0, 1], [0.68, -0.9953, 0.0948, 0.0219, 0.5071, -0.0148, 0.0756, -0.997, 0.0421, -0.0961, -0.9926, -0.0738, 1.1232, 0, 0, 0, 1], [0.6900000000000001, -0.9956, 0.0905, 0.0223, 0.507, -0.0151, 0.0791, -0.9968, 0.0433, -0.092, -0.9928, -0.0774, 1.1234, 0, 0, 0, 1], [0.7000000000000001, -0.996, 0.0862, 0.0226, 0.507, -0.0154, 0.0826, -0.9965, 0.0446, -0.0877, -0.9929, -0.0809, 1.1236, 0, 0, 0, 1], [0.7100000000000001, -0.9964, 0.0817, 0.0229, 0.5069, -0.0159, 0.0861, -0.9962, 0.0459, -0.0833, -0.9929, -0.0845, 1.1238, 0, 0, 0, 1], [0.72, -0.9968, 0.0771, 0.0233, 0.5069, -0.0163, 0.0897, -0.9958, 0.0472, -0.0788, -0.993, -0.0881, 1.124, 0, 0, 0, 1], [0.73, -0.9971, 0.0723, 0.0236, 0.5068, -0.0168, 0.0933, -0.9955, 0.0485, -0.0742, -0.993, -0.0918, 1.1242, 0, 0, 0, 1], [0.74, -0.9974, 0.0675, 0.0239, 0.5067, -0.0173, 0.0968, -0.9952, 0.0497, -0.0695, -0.993, -0.0954, 1.1244, 0, 0, 0, 1], [0.75, -0.9977, 0.0628, 0.0241, 0.5067, -0.0177, 0.1004, -0.9948, 0.051, -0.0649, -0.993, -0.0991, 1.1246, 0, 0, 0, 1], [0.76, -0.998, 0.0581, 0.0242, 0.5066, -0.0181, 0.104, -0.9944, 0.0523, -0.0603, -0.9929, -0.1027, 1.1247, 0, 0, 0, 1], [0.77, -0.9983, 0.0535, 0.0243, 0.5066, -0.0184, 0.1076, -0.994, 0.0535, -0.0558, -0.9928, -0.1064, 1.1249, 0, 0, 0, 1], [0.78, -0.9985, 0.0489, 0.0242, 0.5066, -0.0187, 0.1112, -0.9936, 0.0547, -0.0512, -0.9926, -0.1101, 1.125, 0, 0, 0, 1], [0.79, -0.9987, 0.0443, 0.0241, 0.5065, -0.0189, 0.1148, -0.9932, 0.0559, -0.0468, -0.9924, -0.1138, 1.1252, 0, 0, 0, 1], [0.8, -0.9989, 0.0399, 0.0239, 0.5065, -0.0191, 0.1184, -0.9928, 0.0571, -0.0425, -0.9922, -0.1175, 1.1253, 0, 0, 0, 1], [0.81, -0.9991, 0.0357, 0.0237, 0.5065, -0.0192, 0.122, -0.9923, 0.0583, -0.0383, -0.9919, -0.1212, 1.1254, 0, 0, 0, 1], [0.8200000000000001, -0.9992, 0.0316, 0.0233, 0.5065, -0.0192, 0.1256, -0.9919, 0.0595, -0.0342, -0.9916, -0.1249, 1.1255, 0, 0, 0, 1], [0.8300000000000001, -0.9994, 0.0277, 0.0229, 0.5065, -0.0192, 0.1293, -0.9914, 0.0607, -0.0304, -0.9912, -0.1286, 1.1256, 0, 0, 0, 1], [0.8400000000000001, -0.9995, 0.024, 0.0224, 0.5065, -0.0191, 0.1329, -0.9909, 0.0619, -0.0267, -0.9908, -0.1324, 1.1257, 0, 0, 0, 1], [0.85, -0.9995, 0.0205, 0.0219, 0.5066, -0.0189, 0.1365, -0.9905, 0.0631, -0.0233, -0.9904, -0.1361, 1.1258, 0, 0, 0, 1], [0.86, -0.9996, 0.0174, 0.0212, 0.5066, -0.0186, 0.1401, -0.99, 0.0643, -0.0202, -0.99, -0.1398, 1.1258, 0, 0, 0, 1], [0.87, -0.9997, 0.0145, 0.0205, 0.5067, -0.0182, 0.1438, -0.9894, 0.0655, -0.0173, -0.9895, -0.1434, 1.1259, 0, 0, 0, 1], [0.88, -0.9997, 0.012, 0.0198, 0.5067, -0.0178, 0.1474, -0.9889, 0.0667, -0.0148, -0.989, -0.1471, 1.1259, 0, 0, 0, 1], [0.89, -0.9998, 0.0097, 0.019, 0.5068, -0.0173, 0.151, -0.9884, 0.0679, -0.0125, -0.9885, -0.1508, 1.126, 0, 0, 0, 1], [0.9, -0.9998, 0.0078, 0.0181, 0.5069, -0.0167, 0.1545, -0.9878, 0.0691, -0.0105, -0.988, -0.1544, 1.126, 0, 0, 0, 1], [0.91, -0.9998, 0.0061, 0.0172, 0.507, -0.016, 0.1581, -0.9873, 0.0703, -0.0088, -0.9874, -0.158, 1.126, 0, 0, 0, 1], [0.92, -0.9999, 0.0047, 0.0162, 0.5072, -0.0152, 0.1617, -0.9867, 0.0715, -0.0073, -0.9868, -0.1616, 1.126, 0, 0, 0, 1], [0.93, -0.9999, 0.0036, 0.0152, 0.5073, -0.0144, 0.1652, -0.9862, 0.0727, -0.0061, -0.9863, -0.1651, 1.1261, 0, 0, 0, 1], [0.9400000000000001, -0.9999, 0.0027, 0.0141, 0.5075, -0.0134, 0.1687, -0.9856, 0.0738, -0.0051, -0.9857, -0.1687, 1.1261, 0, 0, 0, 1], [0.9500000000000001, -0.9999, 0.0021, 0.013, 0.5077, -0.0125, 0.1723, -0.985, 0.075, -0.0043, -0.985, -0.1722, 1.1262, 0, 0, 0, 1], [0.9600000000000001, -0.9999, 0.0016, 0.0119, 0.5079, -0.0114, 0.1758, -0.9844, 0.0762, -0.0036, -0.9844, -0.1757, 1.1262, 0, 0, 0, 1], [0.97, -0.9999, 0.0013, 0.0107, 0.5081, -0.0103, 0.1792, -0.9838, 0.0774, -0.0032, -0.9838, -0.1792, 1.1262, 0, 0, 0, 1], [0.98, -1.0, 0.0012, 0.0095, 0.5083, -0.0092, 0.1827, -0.9831, 0.0785, -0.0029, -0.9832, -0.1827, 1.1262, 0, 0, 0, 1], [0.99, -1.0, 0.0012, 0.0083, 0.5085, -0.0079, 0.1862, -0.9825, 0.0797, -0.0027, -0.9825, -0.1861, 1.1263, 0, 0, 0, 1], [1.0, -1.0, 0.0013, 0.0071, 0.5088, -0.0067, 0.1896, -0.9818, 0.0808, -0.0026, -0.9819, -0.1896, 1.1263, 0, 0, 0, 1], [1.01, -1.0, 0.0016, 0.0058, 0.509, -0.0054, 0.193, -0.9812, 0.082, -0.0027, -0.9812, -0.193, 1.1263, 0, 0, 0, 1], [1.02, -1.0, 0.0019, 0.0045, 0.5093, -0.004, 0.1964, -0.9805, 0.0831, -0.0028, -0.9805, -0.1964, 1.1264, 0, 0, 0, 1], [1.03, -1.0, 0.0024, 0.0031, 0.5096, -0.0026, 0.1998, -0.9798, 0.0842, -0.0029, -0.9798, -0.1998, 1.1264, 0, 0, 0, 1], [1.04, -1.0, 0.0029, 0.0017, 0.5099, -0.0011, 0.2032, -0.9791, 0.0853, -0.0032, -0.9791, -0.2032, 1.1264, 0, 0, 0, 1], [1.05, -1.0, 0.0035, 0.0004, 0.5102, 0.0004, 0.2066, -0.9784, 0.0864, -0.0035, -0.9784, -0.2066, 1.1265, 0, 0, 0, 1], [1.06, -1.0, 0.0041, -0.0011, 0.5105, 0.0019, 0.21, -0.9777, 0.0875, -0.0038, -0.9777, -0.21, 1.1265, 0, 0, 0, 1], [1.07, -1.0, 0.0048, -0.0025, 0.5108, 0.0035, 0.2133, -0.977, 0.0886, -0.0042, -0.977, -0.2133, 1.1265, 0, 0, 0, 1], [1.08, -1.0, 0.0056, -0.004, 0.5111, 0.0051, 0.2167, -0.9762, 0.0897, -0.0046, -0.9762, -0.2167, 1.1266, 0, 0, 0, 1], [1.09, -1.0, 0.0064, -0.0055, 0.5114, 0.0067, 0.22, -0.9755, 0.0907, -0.005, -0.9755, -0.2201, 1.1266, 0, 0, 0, 1], [1.1, -1.0, 0.0071, -0.0069, 0.5117, 0.0084, 0.2234, -0.9747, 0.0918, -0.0053, -0.9747, -0.2234, 1.1267, 0, 0, 0, 1], [1.11, -0.9999, 0.0077, -0.0084, 0.5121, 0.01, 0.2267, -0.9739, 0.0928, -0.0056, -0.9739, -0.2268, 1.1267, 0, 0, 0, 1], [1.12, -0.9999, 0.0084, -0.0099, 0.5124, 0.0116, 0.23, -0.9731, 0.0939, -0.0059, -0.9731, -0.2301, 1.1267, 0, 0, 0, 1], [1.1300000000000001, -0.9999, 0.0089, -0.0114, 0.5127, 0.0131, 0.2334, -0.9723, 0.0949, -0.006, -0.9723, -0.2335, 1.1268, 0, 0, 0, 1], [1.1400000000000001, -0.9999, 0.0094, -0.0128, 0.513, 0.0147, 0.2367, -0.9715, 0.0959, -0.0061, -0.9715, -0.2368, 1.1268, 0, 0, 0, 1], [1.1500000000000001, -0.9998, 0.0099, -0.0142, 0.5133, 0.0162, 0.24, -0.9706, 0.0969, -0.0062, -0.9707, -0.2402, 1.1269, 0, 0, 0, 1], [1.1600000000000001, -0.9998, 0.0103, -0.0157, 0.5136, 0.0177, 0.2434, -0.9698, 0.0979, -0.0062, -0.9699, -0.2435, 1.1269, 0, 0, 0, 1], [1.17, -0.9998, 0.0107, -0.0171, 0.5139, 0.0192, 0.2467, -0.9689, 0.0989, -0.0061, -0.969, -0.2469, 1.1269, 0, 0, 0, 1], [1.18, -0.9998, 0.011, -0.0185, 0.5142, 0.0207, 0.2501, -0.968, 0.0999, -0.006, -0.9682, -0.2502, 1.127, 0, 0, 0, 1], [1.19, -0.9997, 0.0113, -0.0199, 0.5145, 0.0221, 0.2534, -0.9671, 0.1009, -0.0059, -0.9673, -0.2536, 1.127, 0, 0, 0, 1], [1.2, -0.9997, 0.0115, -0.0213, 0.5147, 0.0235, 0.2567, -0.9662, 0.1018, -0.0057, -0.9664, -0.2569, 1.1271, 0, 0, 0, 1], [1.21, -0.9997, 0.0118, -0.0227, 0.515, 0.025, 0.2601, -0.9653, 0.1028, -0.0055, -0.9655, -0.2603, 1.1271, 0, 0, 0, 1], [1.22, -0.9996, 0.0119, -0.0241, 0.5153, 0.0263, 0.2634, -0.9643, 0.1037, -0.0052, -0.9646, -0.2636, 1.1272, 0, 0, 0, 1], [1.23, -0.9996, 0.0121, -0.0254, 0.5156, 0.0277, 0.2667, -0.9634, 0.1047, -0.0049, -0.9637, -0.2669, 1.1272, 0, 0, 0, 1], [1.24, -0.9996, 0.0122, -0.0268, 0.5158, 0.0291, 0.27, -0.9624, 0.1056, -0.0045, -0.9628, -0.2703, 1.1273, 0, 0, 0, 1], [1.25, -0.9995, 0.0123, -0.0281, 0.5161, 0.0304, 0.2734, -0.9614, 0.1065, -0.0041, -0.9618, -0.2736, 1.1273, 0, 0, 0, 1], [1.26, -0.9995, 0.0123, -0.0295, 0.5164, 0.0317, 0.2767, -0.9604, 0.1075, -0.0037, -0.9609, -0.2769, 1.1274, 0, 0, 0, 1], [1.27, -0.9995, 0.0123, -0.0308, 0.5166, 0.033, 0.28, -0.9594, 0.1084, -0.0032, -0.9599, -0.2803, 1.1274, 0, 0, 0, 1], [1.28, -0.9994, 0.0123, -0.0321, 0.5169, 0.0343, 0.2833, -0.9584, 0.1093, -0.0027, -0.9589, -0.2836, 1.1274, 0, 0, 0, 1], [1.29, -0.9994, 0.0122, -0.0334, 0.5172, 0.0355, 0.2867, -0.9574, 0.1102, -0.0021, -0.958, -0.2869, 1.1275, 0, 0, 0, 1], [1.3, -0.9993, 0.0121, -0.0347, 0.5174, 0.0367, 0.29, -0.9563, 0.1111, -0.0015, -0.957, -0.2902, 1.1275, 0, 0, 0, 1], [1.31, -0.9993, 0.012, -0.036, 0.5177, 0.038, 0.2933, -0.9553, 0.112, -0.0009, -0.956, -0.2935, 1.1276, 0, 0, 0, 1], [1.32, -0.9992, 0.0117, -0.0371, 0.5179, 0.0389, 0.2966, -0.9542, 0.1128, -0.0002, -0.9549, -0.2969, 1.1276, 0, 0, 0, 1], [1.33, -0.9992, 0.0115, -0.0382, 0.5182, 0.0399, 0.3, -0.9531, 0.1137, 0.0005, -0.9539, -0.3002, 1.1277, 0, 0, 0, 1], [1.34, -0.9992, 0.0112, -0.0393, 0.5184, 0.0408, 0.3033, -0.952, 0.1146, 0.0013, -0.9528, -0.3035, 1.1278, 0, 0, 0, 1], [1.35, -0.9991, 0.0108, -0.0404, 0.5186, 0.0417, 0.3067, -0.9509, 0.1154, 0.0021, -0.9518, -0.3069, 1.1278, 0, 0, 0, 1], [1.36, -0.999, 0.0129, -0.0419, 0.519, 0.0438, 0.3098, -0.9498, 0.1163, 0.0007, -0.9507, -0.31, 1.1279, 0, 0, 0, 1], [1.37, -0.999, 0.0123, -0.0429, 0.5192, 0.0446, 0.3131, -0.9487, 0.1171, 0.0018, -0.9496, -0.3133, 1.1279, 0, 0, 0, 1], [1.3800000000000001, -0.999, 0.0117, -0.0439, 0.5194, 0.0454, 0.3165, -0.9475, 0.118, 0.0028, -0.9485, -0.3167, 1.128, 0, 0, 0, 1], [1.3900000000000001, -0.9989, 0.0111, -0.0449, 0.5197, 0.0461, 0.3198, -0.9464, 0.1188, 0.0039, -0.9474, -0.32, 1.128, 0, 0, 0, 1], [1.4000000000000001, -0.9988, 0.0131, -0.0464, 0.52, 0.0482, 0.3229, -0.9452, 0.1196, 0.0026, -0.9464, -0.3231, 1.1281, 0, 0, 0, 1], [1.4100000000000001, -0.9988, 0.0122, -0.0474, 0.5202, 0.0488, 0.3262, -0.944, 0.1204, 0.0039, -0.9452, -0.3264, 1.1281, 0, 0, 0, 1], [1.42, -0.9988, 0.0114, -0.0484, 0.5204, 0.0494, 0.3296, -0.9428, 0.1212, 0.0052, -0.9441, -0.3297, 1.1282, 0, 0, 0, 1], [1.43, -0.9987, 0.0132, -0.0499, 0.5208, 0.0514, 0.3326, -0.9417, 0.122, 0.0041, -0.943, -0.3328, 1.1283, 0, 0, 0, 1], [1.44, -0.9986, 0.0123, -0.0509, 0.521, 0.052, 0.3359, -0.9404, 0.1228, 0.0055, -0.9418, -0.3361, 1.1283, 0, 0, 0, 1], [1.45, -0.9986, 0.0116, -0.0518, 0.5212, 0.0527, 0.3393, -0.9392, 0.1236, 0.0067, -0.9406, -0.3394, 1.1284, 0, 0, 0, 1], [1.46, -0.9985, 0.0133, -0.0533, 0.5215, 0.0547, 0.3423, -0.938, 0.1243, 0.0058, -0.9395, -0.3425, 1.1284, 0, 0, 0, 1], [1.47, -0.9984, 0.0125, -0.0543, 0.5217, 0.0553, 0.3456, -0.9368, 0.125, 0.0071, -0.9383, -0.3457, 1.1285, 0, 0, 0, 1], [1.48, -0.9983, 0.0141, -0.0558, 0.522, 0.0572, 0.3486, -0.9355, 0.1258, 0.0063, -0.9372, -0.3488, 1.1286, 0, 0, 0, 1], [1.49, -0.9983, 0.0133, -0.0568, 0.5222, 0.0578, 0.3519, -0.9342, 0.1265, 0.0076, -0.9359, -0.3521, 1.1286, 0, 0, 0, 1], [1.5, -0.9982, 0.0126, -0.0578, 0.5223, 0.0585, 0.3552, -0.933, 0.1272, 0.0088, -0.9347, -0.3553, 1.1287, 0, 0, 0, 1], [1.51, -0.9981, 0.014, -0.0593, 0.5226, 0.0604, 0.3582, -0.9317, 0.1279, 0.0082, -0.9335, -0.3584, 1.1287, 0, 0, 0, 1], [1.52, -0.9981, 0.0133, -0.0603, 0.5228, 0.0611, 0.3615, -0.9304, 0.1285, 0.0095, -0.9323, -0.3616, 1.1288, 0, 0, 0, 1], [1.53, -0.998, 0.0127, -0.0614, 0.5229, 0.0618, 0.3648, -0.929, 0.1292, 0.0106, -0.931, -0.3648, 1.1289, 0, 0, 0, 1], [1.54, -0.9979, 0.0139, -0.0629, 0.5232, 0.0636, 0.3678, -0.9277, 0.1298, 0.0102, -0.9298, -0.3679, 1.1289, 0, 0, 0, 1], [1.55, -0.9979, 0.0133, -0.0639, 0.5233, 0.0643, 0.371, -0.9264, 0.1305, 0.0114, -0.9285, -0.3711, 1.129, 0, 0, 0, 1], [1.56, -0.9978, 0.0144, -0.0654, 0.5236, 0.066, 0.374, -0.9251, 0.1311, 0.0111, -0.9273, -0.3741, 1.129, 0, 0, 0, 1], [1.57, -0.9977, 0.0138, -0.0665, 0.5237, 0.0668, 0.3772, -0.9237, 0.1317, 0.0123, -0.926, -0.3773, 1.1291, 0, 0, 0, 1], [1.58, -0.9976, 0.0133, -0.0676, 0.5238, 0.0676, 0.3805, -0.9223, 0.1323, 0.0135, -0.9247, -0.3805, 1.1292, 0, 0, 0, 1], [1.59, -0.9975, 0.0142, -0.069, 0.5241, 0.0692, 0.3835, -0.921, 0.1329, 0.0134, -0.9235, -0.3835, 1.1292, 0, 0, 0, 1], [1.6, -0.9974, 0.0137, -0.0702, 0.5242, 0.07, 0.3867, -0.9196, 0.1334, 0.0146, -0.9221, -0.3866, 1.1293, 0, 0, 0, 1], [1.61, -0.9973, 0.0145, -0.0716, 0.5244, 0.0716, 0.3896, -0.9182, 0.134, 0.0146, -0.9209, -0.3896, 1.1294, 0, 0, 0, 1], [1.62, -0.9972, 0.0139, -0.0728, 0.5245, 0.0725, 0.3928, -0.9168, 0.1345, 0.0158, -0.9195, -0.3927, 1.1294, 0, 0, 0, 1], [1.6300000000000001, -0.9971, 0.0147, -0.0743, 0.5247, 0.074, 0.3958, -0.9153, 0.1351, 0.016, -0.9182, -0.3957, 1.1295, 0, 0, 0, 1], [1.6400000000000001, -0.997, 0.0141, -0.0755, 0.5248, 0.0749, 0.399, -0.9139, 0.1356, 0.0172, -0.9169, -0.3988, 1.1295, 0, 0, 0, 1], [1.6500000000000001, -0.9969, 0.0147, -0.077, 0.5249, 0.0764, 0.4019, -0.9125, 0.1361, 0.0175, -0.9156, -0.4018, 1.1296, 0, 0, 0, 1], [1.6600000000000001, -0.9968, 0.0142, -0.0783, 0.525, 0.0773, 0.4051, -0.911, 0.1366, 0.0188, -0.9142, -0.4049, 1.1297, 0, 0, 0, 1], [1.6700000000000002, -0.9967, 0.0146, -0.0797, 0.5252, 0.0787, 0.408, -0.9096, 0.137, 0.0193, -0.9128, -0.4078, 1.1298, 0, 0, 0, 1], [1.68, -0.9966, 0.0149, -0.0812, 0.5253, 0.0801, 0.411, -0.9081, 0.1375, 0.0198, -0.9115, -0.4108, 1.1298, 0, 0, 0, 1], [1.69, -0.9965, 0.0152, -0.0826, 0.5254, 0.0815, 0.414, -0.9066, 0.1379, 0.0204, -0.9102, -0.4138, 1.1299, 0, 0, 0, 1], [1.7, -0.9964, 0.0147, -0.0841, 0.5255, 0.0825, 0.4171, -0.9051, 0.1384, 0.0218, -0.9088, -0.4167, 1.13, 0, 0, 0, 1], [1.71, -0.9962, 0.0148, -0.0856, 0.5255, 0.0839, 0.42, -0.9036, 0.1388, 0.0225, -0.9074, -0.4197, 1.13, 0, 0, 0, 1], [1.72, -0.9961, 0.0149, -0.087, 0.5256, 0.0851, 0.423, -0.9021, 0.1392, 0.0234, -0.906, -0.4226, 1.1301, 0, 0, 0, 1], [1.73, -0.996, 0.0149, -0.0885, 0.5257, 0.0864, 0.4259, -0.9006, 0.1396, 0.0243, -0.9046, -0.4255, 1.1302, 0, 0, 0, 1], [1.74, -0.9958, 0.0148, -0.0901, 0.5257, 0.0877, 0.4289, -0.8991, 0.14, 0.0253, -0.9032, -0.4284, 1.1302, 0, 0, 0, 1], [1.75, -0.9957, 0.0147, -0.0916, 0.5258, 0.089, 0.4318, -0.8976, 0.1404, 0.0263, -0.9018, -0.4313, 1.1303, 0, 0, 0, 1], [1.76, -0.9955, 0.0145, -0.0932, 0.5258, 0.0902, 0.4348, -0.896, 0.1407, 0.0275, -0.9004, -0.4341, 1.1304, 0, 0, 0, 1], [1.77, -0.9954, 0.0143, -0.0948, 0.5258, 0.0915, 0.4377, -0.8945, 0.1411, 0.0287, -0.899, -0.437, 1.1305, 0, 0, 0, 1], [1.78, -0.9952, 0.014, -0.0964, 0.5258, 0.0927, 0.4406, -0.8929, 0.1414, 0.03, -0.8976, -0.4398, 1.1305, 0, 0, 0, 1], [1.79, -0.9951, 0.0136, -0.0982, 0.5258, 0.094, 0.4435, -0.8913, 0.1417, 0.0314, -0.8962, -0.4426, 1.1306, 0, 0, 0, 1], [1.8, -0.9949, 0.0132, -0.0999, 0.5258, 0.0953, 0.4464, -0.8897, 0.142, 0.0329, -0.8947, -0.4454, 1.1307, 0, 0, 0, 1], [1.81, -0.9947, 0.0129, -0.1016, 0.5258, 0.0965, 0.4493, -0.8882, 0.1423, 0.0342, -0.8933, -0.4482, 1.1307, 0, 0, 0, 1], [1.82, -0.9946, 0.0125, -0.1033, 0.5257, 0.0978, 0.4522, -0.8866, 0.1426, 0.0357, -0.8919, -0.4509, 1.1308, 0, 0, 0, 1], [1.83, -0.9944, 0.0122, -0.105, 0.5257, 0.099, 0.455, -0.885, 0.1428, 0.0369, -0.8904, -0.4537, 1.1309, 0, 0, 0, 1], [1.84, -0.9942, 0.0118, -0.1067, 0.5257, 0.1003, 0.4578, -0.8834, 0.1431, 0.0384, -0.889, -0.4564, 1.1309, 0, 0, 0, 1], [1.85, -0.994, 0.0116, -0.1083, 0.5257, 0.1015, 0.4606, -0.8818, 0.1433, 0.0396, -0.8875, -0.4591, 1.131, 0, 0, 0, 1]], material_var_cylinder_id_139963659994704);
+sceneElements.push(var_var_cylinder_id_139963659994704);
+
+
+
+//BEGIN DECLARATION OF THE GROUP 'var_group_id_139963660038096'
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963660009360'
+
+const material_var_cylinder_id_139963660009360 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "red",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963660009360 = new Cylinder(0.004,0.1,[[0, -0.0305, -0.9919, -0.1233, 0.4755, -0.5018, 0.1219, -0.8564, 0.1267, 0.8644, 0.0358, -0.5014, 1.1772, 0, 0, 0, 1]], material_var_cylinder_id_139963660009360);
+sceneElements.push(var_var_cylinder_id_139963660009360);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963659995728'
+
+const material_var_cylinder_id_139963659995728 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "lime",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963659995728 = new Cylinder(0.004,0.1,[[0, -0.9919, 0.1233, 0.0305, 0.5313, 0.1219, 0.8564, 0.5018, 0.1634, 0.0358, 0.5014, -0.8644, 1.2005, 0, 0, 0, 1]], material_var_cylinder_id_139963659995728);
+sceneElements.push(var_var_cylinder_id_139963659995728);
+
+
+//BEGIN DECLARATION OF THE CYLINDER 'var_cylinder_id_139963660007824'
+
+const material_var_cylinder_id_139963660007824 = new MeshPhysicalMaterial({
+opacity: 1,
+transparent: false,
+aoMapIntensity: 1,
+bumpScale: 1,
+color: "blue",
+emissive: "black",
+emissiveIntensity: 1,
+envMapIntensity: 1,
+flatShading: false,
+lightMapIntensity: 1,
+metalness: 0,
+normalScale: new Vector2(1,1),
+refractionRatio: 0.98,
+roughness: 1,
+clearcoat: 0,
+clearcoatNormalScale: new Vector2(1,1),
+clearcoatRoughness: 0,
+ior: 1.5,
+reflectivity: 0.5,
+sheen: 0,
+sheenRoughness: 1,
+sheenColor: "white",
+specularIntensity: 0,
+specularColor: "white",
+transmission: 0,
+});
+
+
+const var_var_cylinder_id_139963660007824 = new Cylinder(0.004,0.1,[[0, -0.9919, 0.0305, -0.1233, 0.5267, 0.1219, 0.5018, -0.8564, 0.1457, 0.0358, -0.8644, -0.5014, 1.1322, 0, 0, 0, 1]], material_var_cylinder_id_139963660007824);
+sceneElements.push(var_var_cylinder_id_139963660007824);
+
+
+//USER INPUT GOES HERE
+
+
+
+// add stuff to the scene
+for (let i = 0; i < sceneElements.length; i++) {
+	if (typeof sceneElements[i].shape != "undefined") {
+		scene.add(sceneElements[i].shape);
+	}
+}
+
+
+
+//Add LDR to the scene
+if (!(ldrUrls.length == 0)) {
+	const pmremGenerator = new PMREMGenerator(renderer);
+	var ldrCubeMap = new CubeTextureLoader().load(ldrUrls, function () {
+
+		var ldrCubeRenderTarget = pmremGenerator.fromCubemap(ldrCubeMap);
+
+		ldrCubeMap.encoding = sRGBEncoding;
+
+
+		for (let i = 0; i < sceneElements.length; i++) {
+			sceneElements[i].setEnvMap(ldrCubeRenderTarget.texture);
+		}
+		scene.background = ldrCubeMap;
+	});
+	renderer.toneMappingExposure = 1.0;
+}
+
+
+
+//Add gui
+var gui = new GUI({ autoPlace: false, width: "800px" });
+var customContainer = document.getElementById('canvas_container_' + sceneID);
+customContainer.appendChild(gui.domElement);
+
+var automaticPlay = true;
+var manualTime = 0;
+
+gui.add({ Progress: 0 }, "Progress", 0, maxTime, 0.01).onChange(function (value) {
+	automaticPlay = false;
+	manualTime = value + 0.0001;
+	btn.innerHTML = "&#9654";
+})
+customContainer.getElementsByClassName('c')[0].style.width = (canvas.clientWidth - 20).toString() + 'px';
+customContainer.getElementsByClassName('dg main')[0].style.width = canvas.clientWidth.toString() + 'px';
+customContainer.getElementsByClassName('dg main')[0].style.right = '0px'; //0
+customContainer.getElementsByClassName('dg main')[0].style.top = '0px'; //550
+customContainer.getElementsByClassName('dg main')[0].style.position = 'relative'; //absolute
+customContainer.getElementsByClassName('close-button close-bottom')[0].style.height = '0px';
+customContainer.getElementsByClassName('close-button close-bottom')[0].innerHTML = '';
+customContainer.getElementsByClassName('property-name')[0].innerHTML = '';
+customContainer.getElementsByClassName('slider')[0].style.width = (canvas.clientWidth - 100).toString() + 'px'
+customContainer.getElementsByClassName('slider-fg')[0].style.backgroundColor = '#19bd39'
+customContainer.querySelectorAll("input[type=text]")[0].style.width = '50px';
+customContainer.querySelectorAll("input[type=text]")[0].style.color = '#19bd39';
+
+customContainer.getElementsByClassName('dg')[0].style.borderLeft = '4px solid #1a1a1a'
+customContainer.getElementsByClassName('cr')[0].style.borderLeft = '4px solid #1a1a1a'
+customContainer.getElementsByClassName('number')[0].style.borderLeft = '4px solid #1a1a1a'
+var recoveryCurrentTime = false;
+
+let btn = document.createElement("button");
+btn.style.backgroundColor = "#1a1a1a";
+btn.style.color = "#19bd39";
+btn.style.border = "none";
+btn.style.height = "28px";
+btn.style.width = "28px";
+btn.innerHTML = "||";
+btn.onclick = function () {
+
+	automaticPlay = !automaticPlay;
+
+	if (automaticPlay) {
+		btn.innerHTML = "||";
+		recoveryCurrentTime = true;
+	}
+	else {
+		manualTime = parseFloat(customContainer.querySelectorAll("input[type=text]")[0].value) + 0.0001;
+		btn.innerHTML = "&#9654";
+	}
+
+};
+customContainer.getElementsByClassName('c')[0].style.verticalAlign = "middle"
+customContainer.getElementsByClassName('c')[0].appendChild(btn);
+//------------------------------------------------------------
+
+//Wait until all objects loaded
+
+var loadedAll = false;
+var sceneDrawn = false;
+
+
+//Get starting ms
+var startMs = elapsedMs()
+
+//Initialize
+var heightScene;
+var heightBar;
+
+document.getElementsByClassName('controller')[0].appendChild(customContainer.getElementsByClassName('dg main')[0])
+document.getElementsByClassName('controller')[0].style.opacity = "0"
+
+heightScene = document.getElementById('scene_' + sceneID).style.height;
+document.getElementById('scene_' + sceneID).style.visibility = 'hidden';
+document.getElementById('scene_' + sceneID).style.height = '0px';
+
+heightBar = customContainer.getElementsByClassName('dg main')[0].style.height;
+customContainer.getElementsByClassName('dg main')[0].style.visibility = 'hidden';
+customContainer.getElementsByClassName('dg main')[0].style.height = '0px';
+
+
+//-------------------- THE ANIMATION LOOP -------------------
+
+
+
+renderer.setAnimationLoop(() => {
+
+
+	loadedAll = true;
+
+	for (let i = 0; i < sceneElements.length; i++) {
+		loadedAll = loadedAll && sceneElements[i].hasLoaded();
+	}
+
+	if (!loadedAll) {
+		startMs = elapsedMs();
+	}
+	else {
+		//document.getElementById('canvas_container').style.visibility = 'visible';
+		if ((elapsedMs() - startMs > delay) && !sceneDrawn) {
+			document.getElementById('scene_' + sceneID).style.visibility = 'visible';
+			document.getElementById('canvas_container_' + sceneID).getElementsByClassName('dg main')[0].style.visibility = 'visible';
+			document.getElementById('scene_' + sceneID).style.height = heightScene;
+			document.getElementById('canvas_container_' + sceneID).getElementsByClassName('dg main')[0].style.height = heightBar;
+			document.getElementById('loading_screen_' + sceneID).remove();
+			sceneDrawn = true;
+		}
+	}
+
+
+	//MAGIC HAPPENS HERE!!!
+	if (loadedAll && automaticPlay) {
+
+		var currentSeconds;
+		if (!recoveryCurrentTime) {
+
+			for (let i = 0; i < sceneElements.length; i++) {
+				sceneElements[i].nextFrame();
+				sceneElements[i].showFrame();
+			}
+
+			currentSeconds = Math.min(0.001 * Math.max(elapsedMs() - startMs - delay, 0), maxTime);
+
+			var percentage = (100 * currentSeconds / (0.000001 + maxTime)).toString();
+			customContainer.getElementsByClassName('slider-fg')[0].style.width = percentage + "%";
+			customContainer.querySelectorAll("input[type=text]")[0].value = Math.round(100 * currentSeconds) / 100;
+		}
+		else {
+			currentSeconds = customContainer.querySelectorAll("input[type=text]")[0].value;
+			startMs = elapsedMs() - delay - 1000 * currentSeconds;
+			recoveryCurrentTime = false;
+		}
+
+	}
+	if (loadedAll && !automaticPlay) {
+		for (let i = 0; i < sceneElements.length; i++) {
+			sceneElements[i].setFrameTime(manualTime);
+			sceneElements[i].showFrame();
+		}
+	}
+
+	renderer.render(scene, camera);
+});
+//------------------------------------------------------------
+ </script>
+ </body>
+ </html>

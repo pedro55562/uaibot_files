@@ -1,0 +1,24 @@
+{
+    "liveServer.settings.root": "/home/pedro/uaibot_files/info_storage",
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.NoBrowser": false, 
+    "liveServer.settings.browser": "google-chrome", 
+    "liveServer.settings.ignoreFiles": [
+        ".vscode/**",
+        "**/*.scss",
+        "**/*.sass"
+    ],
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "liveServer.settings.donotVerifyTags": true,
+    "python.testing.pytestArgs": [
+        "hybrid_control"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "ifn": "c"
+    }
+}

@@ -32,11 +32,14 @@ class CBFPathFollower:
         Resolve o QP:
 
         min ||u - un||^2 + eps * ||u||^2
-        com un = kp * (qd - q), controle proporcional.
+        com un = kp * (qd - q)
 
         Forma quadrática:
+        
         min u^T H u + f^T u
-        H = 2 * (1 + eps) * I, f = -2 * un
+        
+        H = 2 * (1 + eps) * I 
+        f = -2 * un
         '''
 
 
@@ -70,8 +73,11 @@ class CBFPathFollower:
         A = np.vstack((Aj_min, Aj_max, Ad_obj, A_auto))
         b = np.vstack((Bj_min, Bj_max, Bd_obj, B_auto))
 
+
+        # calcula un - cont. proporcional
         un = self.kp*(qd - self.robot.q)
 
+        # def. H e f do QP
         H = 2*(1 + self.eps)*np.identity(self.n)
         f = -2*np.array(un).flatten() 
 

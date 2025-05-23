@@ -92,24 +92,20 @@ class CBFPathFollower:
         A_red = A[:, indices]
 
         # Resolve o QP reduzido
-        u_red = ub.Utils.solve_qp(
-            np.array(H_red, dtype=np.float64),
-            np.array(f_red, dtype=np.float64),
-            np.array(A_red, dtype=np.float64),
-            np.array(b, dtype=np.float64)
-        )
+        try:
+            u_red = ub.Utils.solve_qp(
+                np.array(H_red, dtype=np.float64),
+                np.array(f_red, dtype=np.float64),
+                np.array(A_red, dtype=np.float64),
+                np.array(b, dtype=np.float64)
+            )
+        except Exception as e:
+            u_red = [0.0, 0.0]
 
         # Monta vetor de controle completo
         u_full = np.zeros(self.n)
         u_full[j1] = u_red[0]
         u_full[j2] = u_red[1]
-
+        
         self.u = u_full
         self.r = r
-
-
-
-
-
-
-

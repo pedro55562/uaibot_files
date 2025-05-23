@@ -74,7 +74,7 @@ def setup_motion_planning_simulation(problem_index):
         temp_obs.append( obs.to_point_cloud(disc=0.06) )
 
     sim = ub.Simulation()
-    sim.add(temp_obs)
+    sim.add(all_obs)
     sim.add(robot)
     sim.add(frame_tg)
 

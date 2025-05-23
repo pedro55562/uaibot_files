@@ -31,11 +31,13 @@ def create_config_slice(   robot, joint_idx_1, joint_idx_2, num_points, htm_base
 
     return result_matrix, q1_vals, q2_vals
 
-
 def plot_result_matrix(
-    matrix, q1_vals, q2_vals, joint_idx_1, joint_idx_2,
-    filename=None, traj_q1=None, traj_q2=None, show = True
+    matrix, q1_vals, q2_vals, joint_idx_1, joint_idx_2, q_goal,
+    filename=None, traj_q1=None, traj_q2=None, show=False
 ):
+    from matplotlib.colors import ListedColormap
+    import matplotlib.pyplot as plt
+
     cmap = ListedColormap(["#d82626", "#115711"])  # Vermelho (colisão), Verde (livre)
 
     plt.figure(figsize=(7, 6))
@@ -58,7 +60,13 @@ def plot_result_matrix(
         plt.plot(traj_q1, traj_q2, color='blue', linewidth=2.5, label='Trajetória')
         plt.plot(traj_q1[0], traj_q2[0], 'ko', markersize=8, label='Início')  # ponto preto no início
         plt.plot(traj_q1[-1], traj_q2[-1], 'kX', markersize=10, label='Fim')  # X preto no fim
-        plt.legend(loc='upper right')
+
+    # Ponto objetivo (q_goal)
+    q_goal_1 = q_goal[joint_idx_1]
+    q_goal_2 = q_goal[joint_idx_2]
+    plt.plot(q_goal_1, q_goal_2, 'b*', markersize=14, label='Objetivo')  # estrela vermelha
+
+    plt.legend(loc='upper right')
 
     # Rótulos e título
     plt.xlabel(f'Junta {joint_idx_1 + 1} (rad)')
@@ -74,6 +82,7 @@ def plot_result_matrix(
         plt.close()
     if show:
         plt.show()
+
 def get_q_goal(robot, all_obs, htm_tg, htm_base, max_iter = 300):
     for i in range(round(max_iter)):
         try:
@@ -106,53 +115,81 @@ def run_all_joint_pairs(robot, num_points, htm_base, all_obs):
         plot_result_matrix(result_matrix, q1_vals, q2_vals, j1, j2, "/home/pedro/uaibot_files/code/config_slice/" + f"juntas { j1 + 1 } e { j2 + 1 }")
 
 if __name__ == "__main__":
+    # 1798 257 434 734
+    robot, sim, all_obs, q0, htm_tg, htm_base = setup_motion_planning_simulation(1798)
 
-    robot, sim, all_obs, q0, htm_tg, htm_base = setup_motion_planning_simulation(434)
-    q_goal = get_q_goal(robot=robot,all_obs=all_obs,htm_tg=htm_tg,htm_base=htm_base)
+    q_goal = get_q_goal(robot=robot, all_obs=all_obs, htm_tg=htm_tg, htm_base=htm_base)
+    if q_goal is None:
+        print("Não foi possível encontrar uma configuração final válida.")
+        exit()
 
-    j1    = 0
-    j2    = 1
-    q_fix = robot.q
-
-    curr_q = robot.q
+    dof = robot.q.shape[0]
+    dt = 0.01
+    max_steps = 1000
+    i = 0
 
     cbf = CBFPathFollower(
         robot=robot,
         obstacles=all_obs,
         htm_tg=htm_tg,
-        dj_lim=np.deg2rad(2),  
-        d_lim=0.01,             
-        dlim_auto=0.002,        
-        eta_obs=0.6,            
-        eta_auto=0.6,           
-        eta_joint=0.6,         
-        eps=1e-3,               
-        kp=1.0                 
+        dj_lim=np.deg2rad(2),
+        d_lim=0.01,
+        dlim_auto=0.002,
+        eta_obs=0.3,
+        eta_auto=0.3,
+        eta_joint=0.3,
+        eps=1e-2,
+        kp=1.0
     )
-    t = 0
-    i = 0
-    dt = 0.01
-    trajectory_q1 = []
-    trajectory_q2 = []    
-    while i < 1000:
-        curr_q = robot.q
-        cbf.compute_control(j1 = 0, j2 = 1, qd = q_goal)
-        u = cbf.u.reshape(-1, 1)
-        set_configuration_speed(robot=robot,q_dot=u,t=t,dt=dt)
-        t = i * dt
-        i += 1
-        trajectory_q1.append(curr_q[j1, 0])
-        trajectory_q2.append(curr_q[j2, 0])
 
-    result_matrix, q1_vals, q2_vals = create_config_slice(
-        robot=robot,
-        joint_idx_1=j1,
-        joint_idx_2=j2,
-        num_points=200,
-        htm_base=htm_base,
-        all_obs=all_obs,
-        q_fix=q_fix
-    )
-    plot_result_matrix(result_matrix, q1_vals, q2_vals, j1, j2, "/home/pedro/uaibot_files/code/config_slice/" + f"juntas { j1 + 1 } e { j2 + 1 }",traj_q1=trajectory_q1,traj_q2=trajectory_q2)
-    sim.save("/home/pedro/uaibot_files/code/config_slice/" , "teste")
-    #run_all_joint_pairs(robot=robot, num_points=200, htm_base=htm_base, all_obs=all_obs)
+    joint_pairs = [(0, 1), (1, 2), (2, 3), (3, 4),(4, 5),(5, 6)]
+    for j1, j2 in joint_pairs:
+        print(f"\nExecutando controle para juntas {j1 + 1} e {j2 + 1}")
+
+        j = 0
+        t = 0
+        trajectory_q1 = []
+        trajectory_q2 = []
+
+        while j < max_steps:
+            curr_q = robot.q.copy()
+            cbf.compute_control(j1=j1, j2=j2, qd=q_goal)
+
+            u = cbf.u.reshape(-1, 1)
+            set_configuration_speed(robot=robot, q_dot=u, t=t, dt=dt)
+
+            t = i * dt
+            j += 1
+            i += 1
+
+            trajectory_q1.append(curr_q[j1, 0])
+            trajectory_q2.append(curr_q[j2, 0])
+       
+        print(f"Criando mapa p/ as juntas {j1 + 1} e {j2 + 1}")
+        q_fix = robot.q.copy()
+        result_matrix, q1_vals, q2_vals = create_config_slice(
+            robot=robot,
+            joint_idx_1=j1,
+            joint_idx_2=j2,
+            num_points=50,
+            htm_base=htm_base,
+            all_obs=all_obs,
+            q_fix=q_fix
+        )
+
+        filename = f"/home/pedro/uaibot_files/code/config_slice/juntas_{j1 + 1}_e_{j2 + 1}.png"
+        plot_result_matrix(
+            result_matrix,
+            q1_vals,
+            q2_vals,
+            joint_idx_1=j1,
+            joint_idx_2=j2,
+            q_goal=q_goal,
+            filename=filename,
+            traj_q1=trajectory_q1,
+            traj_q2=trajectory_q2
+        )
+
+
+    # Salva o estado final da simulação
+    sim.save("/home/pedro/uaibot_files/code/config_slice/", "simulacao_completa")

@@ -552,9 +552,8 @@ for index in scenario_index:
         draw_balls(intermediate_q, robot, sim, color="cyan" , radius = 0.02)
 
         q_dot_hist, t_hist = move_robot_through_path(robot=robot, q_list=sample_path , base_frame=htm_base, t = 0, dt = 0.01, task_tol = 0.01 ,consider_path_orientation = True)
-        save_plot(q_dot_hist, t_hist)
         sim.run()
-        sim.save("/home/pedro55562/uaibot_files/html/path_planning", "mov" + str(index))
+        sim.save("/home/pedro/uaibot_files/info_storage/", "mov" + str(index))
 
 
 

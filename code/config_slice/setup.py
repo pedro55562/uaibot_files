@@ -4,17 +4,11 @@ import uaibot as ub
 import numpy as np
 import matplotlib.pyplot as plt
 
+def store_info(sim, qdot_hist, r_norm ,r_hist, t_hist, folder_path):
+    os.makedirs(folder_path, exist_ok=True)
 
-def store_info(sim, qdot_hist, r_norm ,r_hist, t_hist, scenario_code):
-    folder = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
-    path = "/home/pedro/uaibot_files/info_storage/" + folder
-    os.makedirs(path, exist_ok=True)
-
-    path = path + "/" + str(scenario_code)
-    os.makedirs(path, exist_ok=True)
-
-    sim.save(path , str(scenario_code))
-    save_plots(qdot_hist, r_hist, r_norm ,t_hist, folder_path=path)
+    sim.save(folder_path, "simulacao_completa")
+    save_plots(qdot_hist, r_hist, r_norm ,t_hist, folder_path=folder_path)
 
 def save_plots(q_dot_hist, r_hist, r_norm_hist , t_hist, folder_path):
     q_dot_hist = np.array(q_dot_hist).squeeze()
@@ -24,8 +18,6 @@ def save_plots(q_dot_hist, r_hist, r_norm_hist , t_hist, folder_path):
     def _plot_and_save(data, ylabel, title, filename):
         plt.figure()
         plt.plot(t_hist, data, label=ylabel)
-
-
         plt.xlabel("t (s)")
         plt.ylabel(ylabel)
         plt.title(title)
@@ -38,6 +30,8 @@ def save_plots(q_dot_hist, r_hist, r_norm_hist , t_hist, folder_path):
     _plot_and_save(q_dot_hist, "q_dot (deg/s)", "q_dot x t", "q_dot.png")
     _plot_and_save(r_hist, "r", "r x t", "r.png")
     _plot_and_save(r_norm_hist, "r_norm", "||r|| x t", "r_norm.png")
+
+
 
 def setup_motion_planning_simulation(problem_index):
 
@@ -68,6 +62,7 @@ def setup_motion_planning_simulation(problem_index):
     frame_tg = ub.Frame(htm=htm_tg, size=0.1)
     robot = ub.Robot.create_franka_emika_3(htm=htm_base)
     robot.add_ani_frame(time=0, q=q0)
+    robot.update_col_object(0)
     for obs in all_obs:
         obs._mesh_material = ub.MeshMaterial(color='magenta')
 
@@ -75,6 +70,10 @@ def setup_motion_planning_simulation(problem_index):
     sim.add(all_obs)
     sim.add(robot)
     sim.add(frame_tg)
+
+    for link in robot.links:
+        for col_obj in link.col_objects:
+            sim.add(col_obj[0])
 
     return robot, sim, all_obs, q0, htm_tg, htm_base
 

@@ -101,7 +101,7 @@ class CBFSimulator:
         b_full = np.vstack((b_full, -fun_beta( soft_Dmin , self.eta)))
 
 
-        if self.rotation_enabled and soft_Dmin < self.tangential_threshold: 
+        if self.rotation_enabled: 
 
             tangential_unit = (self.R_mat @ soft_Dmin_grad.T).reshape(1, 2)
             b_tangential = - fun_beta(soft_Dmin - self.tangential_threshold , self.tangential_eta)
@@ -335,13 +335,13 @@ def get_obstacle_config_by_number(config_number):
 
 if __name__ == "__main__":
     # 1 3 4 5 6
-    config_number = 1
+    config_number = 6
     q0, qF, centers, radii = get_obstacle_config_by_number(config_number)
 
 
     simulator = CBFSimulator(
         kp=3.0,                    
-        eta=0.6,                   
+        eta=0.6,                      
         tangential_threshold=0.05,  
         tangential_eta=0.6,        
         R_mat=R_minus90,

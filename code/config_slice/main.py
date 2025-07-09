@@ -114,7 +114,7 @@ if __name__ == "__main__":
     os.makedirs(slice_folder, exist_ok=True)
 
 
-    pares_de_juntas = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+    pares_de_juntas = [(0, 1),(2,3),(4,5)]
 
     robot, sim, all_obs, q0, htm_tg, htm_init = create_scenario()
     q_goal = robot.ikm(htm_tg=htm_tg, htm=robot.htm, no_iter_max=1000, no_tries=100)

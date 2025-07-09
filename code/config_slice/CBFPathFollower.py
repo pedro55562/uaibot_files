@@ -3,6 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from setup import *
 
+
+R_plus90 = np.array([[0, -1],
+                     [1,  0]])
+
+R_minus90 = np.array([[0, 1],
+                      [-1, 0]])
+
+
+def fun_beta(h, eta=1):
+    return eta * h
+
 def set_configuration_speed(robot, q_dot, t, dt):
     q_dot = q_dot.reshape(-1, 1)
     q_next = robot.q + q_dot*dt
@@ -24,12 +35,20 @@ def fun_F(r, kp):
         f[j, 0] = kp * np.sign(r[j, 0]) * np.sqrt(np.abs(r[j, 0]))
     return f
 
+
+
+
 class CBFPathFollower:
     def __init__(self, robot : ub.Robot, obstacles, htm_tg,
                  dj_lim=np.deg2rad(2), d_lim=0.01, dlim_auto=0.002,
                  eta_obs=0.6, eta_auto=0.6, eta_joint=0.6,
-                 eps=1e-3, kp=1.0):
-        
+                 eps=1e-3, kp=1.0, 
+                 tangential_threshold = 0.1, tangential_eta = 0.9, R_mat = R_plus90
+                 ):
+
+        self.tangential_threshold = tangential_threshold
+        self.tangential_eta = tangential_eta
+        self.R_mat = R_mat
 
         self.htm_tg = htm_tg
         self.robot = robot
@@ -82,6 +101,79 @@ class CBFPathFollower:
         b = np.vstack((Bj_min, Bj_max, Bd_obj, B_auto))
         return A, b
 
+    def _build_all_constraints(self, q, indices):
+        # Joint constraints
+        q_min = self.robot.joint_limit[:, 0][indices]
+        q_max = self.robot.joint_limit[:, 1][indices]
+        Aj_min = np.identity(len(indices))
+        Aj_max = -np.identity(len(indices))
+        Bj_min = -self.eta_joint * ((q[indices] - q_min) - self.dj_lim)
+        Bj_max = -self.eta_joint * ((q_max - q[indices]) - self.dj_lim)
+
+
+
+
+
+        ##########################################
+
+        def compute_soft_min(D, grad_D, r):
+            # D: lista de arrays shape (m,1)
+            # grad_D: lista de arrays shape (m, n)
+            D = [np.array(d, dtype=np.float64).reshape(-1, 1) for d in D]  # (m,1)
+            grad_D = [np.array(g, dtype=np.float64) for g in grad_D]       # (m,n)
+
+            D_stack = np.stack(D, axis=2)         # (m,1,N)
+            grad_D_stack = np.stack(grad_D, axis=2)  # (m,n,N)
+
+            # Soft-min termo a termo
+            S = np.sum(np.power(D_stack, -1/r), axis=2, keepdims=True)  # (m,1,1)
+            soft_Dmin = S ** (-r)                                       # (m,1,1)
+            soft_Dmin = soft_Dmin.squeeze(axis=2)                       # (m,1)
+
+            # Gradiente termo a termo
+            weights = D_stack ** (-1/r - 1)                             # (m,1,N)
+            # Expand weights para (m,n,N) para multiplicação elemento a elemento
+            weights_expanded = np.repeat(weights, grad_D_stack.shape[1], axis=1)  # (m,n,N)
+            weighted_grads = weights_expanded * grad_D_stack                       # (m,n,N)
+            # Soma sobre N (obstáculos), resultado (m,n)
+            soft_Dmin_grad = (S ** (-r - 1)).squeeze(axis=2) * np.sum(weighted_grads, axis=2)  # (m,n)
+
+            return soft_Dmin, soft_Dmin_grad
+
+
+        Ad_obj = np.zeros((0, len(indices)))
+        Bd_obj = np.zeros((0, 1))
+
+        D = []
+        grad_d = []
+        for obj in self.obstacles:
+            ds = self.robot.compute_dist(obj=obj)
+            D.append(ds.dist_vect)
+            grad_d.append(ds.jac_dist_mat[:, indices])  # Só as juntas de interesse
+        if D:
+
+            soft_Dmin , soft_Dmin_grad = compute_soft_min(D, grad_d, 0.8)
+            Ad_obj = np.vstack((Ad_obj, soft_Dmin_grad))
+            Bd_obj = np.vstack((Bd_obj, -fun_beta(soft_Dmin, self.eta_obs)))
+
+            tangential_unit = (self.R_mat @ soft_Dmin_grad.T).T
+            b_tangential = - fun_beta(soft_Dmin - self.tangential_threshold , self.tangential_eta)
+
+            Ad_obj = np.vstack((Ad_obj, tangential_unit))
+            Bd_obj = np.vstack((Bd_obj, b_tangential))            
+
+        ##########################################
+
+        # Auto constraints
+        dist_auto = self.robot.compute_dist_auto(q=q)
+        A_auto = dist_auto.jac_dist_mat[:, indices]
+        B_auto = -self.eta_auto * (dist_auto.dist_vect - self.dlim_auto)
+
+        # Stack all
+        A = np.vstack((Aj_min, Aj_max, Ad_obj, A_auto))
+        b = np.vstack((Bj_min, Bj_max, Bd_obj, B_auto))
+        return A, b
+
     def compute_control(self, j1, j2, qd):
         '''
         Resolve o QP:
@@ -97,7 +189,7 @@ class CBFPathFollower:
         u = self.robot.q * 0
         q = self.robot.q
         r, Jr = self.robot.task_function(htm_tg = self.htm_tg, q = q)
-        A, b = self._build_barrier_constraints(q)
+        A, b = self._build_all_constraints(q)
 
         # calcula un - cont. proporcional
         un = fun_G(self.robot.q - qd, self.kp)
@@ -127,37 +219,37 @@ class CBFPathFollower:
 
     def compute_control_task_func(self, j1, j2, qq=None):
         q = self.robot.q if qq is None else qq
+        indices = [j1, j2]
 
         r, Jr = self.robot.task_function(htm_tg = self.htm_tg, q = q)
-        
         r  =  r[0:3, :]
         Jr = Jr[0:3, :]
         
-        A, b = self._build_barrier_constraints(q)        
+        A, b = self._build_all_constraints(q, indices)
         H_full = 2 * (Jr.T @ Jr + self.eps * np.identity(self.n))
         f_full = Jr.T @ fun_F(r, self.kp)
 
-        indices = [j1, j2]
         H_red = H_full[np.ix_(indices, indices)]
         f_red = f_full[indices]
-        A_red = A[:, indices]
+        # A já está reduzido
+        A_red = A
+        b_red = b
 
         try:
             u_red = ub.Utils.solve_qp(
                 np.array(H_red, dtype=np.float64),
                 np.array(f_red, dtype=np.float64),
                 np.array(A_red, dtype=np.float64),
-                np.array(b, dtype=np.float64)
+                np.array(b_red, dtype=np.float64)
             )
         except Exception as e:
             u_red = [0.0, 0.0]
-
+            
         u_full = np.zeros(self.n)
         u_full[j1] = u_red[0]
         u_full[j2] = u_red[1]
         self.u = u_full
         self.r = r
-
 
 
 
@@ -169,9 +261,9 @@ if "__main__" == __name__:
         obstacles=all_obs,
         htm_tg=htm_tg,
         dj_lim=np.deg2rad(2),
-        d_lim=1e-2,
+        d_lim=3e-2,
         dlim_auto=5e-3,
-        eta_obs=0.6,
+        eta_obs=0.3,
         eta_auto=0.6,
         eta_joint=0.6,
         eps=1e-3,
@@ -183,7 +275,7 @@ if "__main__" == __name__:
     tmax_joint = 4
 
 
-    pares_de_juntas = [ (0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+    pares_de_juntas = [ (0, 1)]
     for ji, jj in pares_de_juntas:
         t_junta = 0
         while t_junta < tmax_joint:

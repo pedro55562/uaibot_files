@@ -33,12 +33,14 @@ def save_plots(q_dot_hist, r_hist, r_norm_hist , t_hist, folder_path):
 
 def create_scenario():
     robot = ub.Robot.create_kuka_kr5()
-    q = robot.q #+ np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.2], [0.0]])
+    q = np.array([[np.pi/2], [0.2], [-1.8], [ 0 ], [-np.pi/2], [0.0]])
     robot.add_ani_frame(time=0, q=q)
 
-    obs1 = ub.Box(name="obs1", htm = ub.Utils.trn([0.8,0,0.15]), width=0.5, depth=0.5, height=0.4)
+
+    obs1 = ub.Box(name="obs1", htm = ub.Utils.trn([0 , 0.85, 0.55]), width=1, depth=1, height=0.05)
+
     htm_init = robot.fkm()
-    htm_tg = ub.Utils.trn([0, 0.1, -0.1]) * htm_init
+    htm_tg = htm_init * ub.Utils.trn([0.3, 0, 0.2]) * ub.Utils.roty(-np.pi)
 
     frame_tg = ub.Frame(htm=htm_tg, size=0.1)
     all_obs = [obs1]
@@ -47,6 +49,19 @@ def create_scenario():
     sim.add(all_obs)
     sim.add(robot)
     sim.add(frame_tg)    
+
+    ok, message, _ = robot.check_free_config(obstacles=all_obs)
+    if ok:
+        print("Configuração inicial livre de colisões")
+    else:
+        print(f"Configuração inicial em colisão: {message}")
+
+    try:
+        q_goal = robot.ikm(htm_tg=htm_tg, q0=q, obstacles=all_obs, no_tries = 200, no_iter_max=1000)
+        print("IK encontrada com sucesso!")
+    except Exception as e:
+        print(f"Erro na IK: {e}")
+
     return robot, sim, all_obs, robot.q, htm_tg, htm_init
 
 def setup_motion_planning_simulation(problem_index):

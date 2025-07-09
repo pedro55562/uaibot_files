@@ -384,7 +384,6 @@ def draw_slice(robot, obstacles, q, indexes, value, score_fun, path_q,
 
     Z = np.vectorize(score_fun_sliced)(X, Y)
 
-    #tranf. nao linear p/ ressaltar melhor as cores
     Z_min = np.min(Z)
     Z = Z_min + np.sqrt(Z - Z_min)
     

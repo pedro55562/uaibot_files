@@ -10,7 +10,6 @@ def master_dist(q, robot, obstacles, eps_to_obs=0.015, h_to_obs=0.02, h_merge = 
     q_min = robot.joint_limit[:,0]
     q_max = robot.joint_limit[:,1]
     n = np.shape(q_min)[0]
-
        
     D_tot = np.matrix(np.zeros((0,1)))
     grad_tot = np.matrix(np.zeros((0,n)))
@@ -28,7 +27,7 @@ def master_dist(q, robot, obstacles, eps_to_obs=0.015, h_to_obs=0.02, h_merge = 
     # grad_tot = np.vstack( (grad_tot, 10*dr_auto.jac_dist_mat) )
 
 
-    A_joint = np.matrix(np.vstack(  (np.identity(7), -np.identity(7))  ))
+    A_joint = np.matrix(np.vstack(  (np.identity(n), -np.identity(n))  ))
     b_joint = np.matrix(np.vstack(  (q-(q_min) , (q_max) - q)  ))  
     D_tot = np.vstack( (D_tot, b_joint) )
     grad_tot = np.vstack( (grad_tot, A_joint) )
@@ -116,7 +115,9 @@ def plot_heatmap(mat_stacked, q_min, q_max, i1, i2):
    
    
 def upsample_contour(contour, N):
-
+    if len(contour) == 0:
+        return []  # Retorna uma lista vazia caso o contorno esteja vazio
+    
     contour = np.array(contour)
     upsampled = []
 
@@ -382,6 +383,8 @@ def draw_slice(robot, obstacles, q, indexes, value, score_fun, path_q,
         return score_fun(q_temp)
 
     Z = np.vectorize(score_fun_sliced)(X, Y)
+
+    #tranf. nao linear p/ ressaltar melhor as cores
     Z_min = np.min(Z)
     Z = Z_min + np.sqrt(Z - Z_min)
     

@@ -31,7 +31,23 @@ def save_plots(q_dot_hist, r_hist, r_norm_hist , t_hist, folder_path):
     _plot_and_save(r_hist, "r", "r x t", "r.png")
     _plot_and_save(r_norm_hist, "r_norm", "||r|| x t", "r_norm.png")
 
+def create_scenario():
+    robot = ub.Robot.create_kuka_kr5()
+    q = robot.q #+ np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.2], [0.0]])
+    robot.add_ani_frame(time=0, q=q)
 
+    obs1 = ub.Box(name="obs1", htm = ub.Utils.trn([0.8,0,0.15]), width=0.5, depth=0.5, height=0.4)
+    htm_init = robot.fkm()
+    htm_tg = ub.Utils.trn([0, 0.1, -0.1]) * htm_init
+
+    frame_tg = ub.Frame(htm=htm_tg, size=0.1)
+    all_obs = [obs1]
+
+    sim = ub.Simulation()
+    sim.add(all_obs)
+    sim.add(robot)
+    sim.add(frame_tg)    
+    return robot, sim, all_obs, robot.q, htm_tg, htm_init
 
 def setup_motion_planning_simulation(problem_index):
 
@@ -63,40 +79,21 @@ def setup_motion_planning_simulation(problem_index):
     robot = ub.Robot.create_franka_emika_3(htm=htm_base)
     robot.add_ani_frame(time=0, q=q0)
     robot.update_col_object(0)
-    for obs in all_obs:
-        obs._mesh_material = ub.MeshMaterial(color='magenta')
+    # for obs in all_obs:
+    #     obs._mesh_material = ub.MeshMaterial(color='magenta')
 
     sim = ub.Simulation()
     sim.add(all_obs)
     sim.add(robot)
     sim.add(frame_tg)
 
-    for link in robot.links:
-        for col_obj in link.col_objects:
-            sim.add(col_obj[0])
+    # for link in robot.links:
+    #     for col_obj in link.col_objects:
+    #         sim.add(col_obj[0])
 
     return robot, sim, all_obs, q0, htm_tg, htm_base
 
 def set_configuration_speed(robot, q_dot, t, dt):
     q_next = robot.q + q_dot*dt
     robot.add_ani_frame(time = t+dt, q = q_next)
-
-def draw_balls(pathhh_, robot, sim, color="cyan", radius = 0.01):
-        sl = [ ]
-        for q_c in pathhh_:
-            fkm = robot.fkm(q = q_c)
-            sl.append( fkm[ 0 : 3 , 3] )            
-        balls = []
-        for s in sl:
-            balls.append( ub.Ball(htm = ub.Utils.trn(s), radius = radius, color = color))
-        sim.add(balls)
-
-def draw_pc(pathhh_, robot, sim, color="cyan", radius = 0.01):
-    sl = [ ]
-    for q_c in pathhh_:
-        fkm = robot.fkm(q_c)
-        sl.append( fkm[ 0 : 3 , 3] ) 
-    pc = ub.PointCloud(size = radius, color = color, points = sl)
-    sim.add(pc)
-
 
